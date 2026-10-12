@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         };
 
         RefreshHeader();
+        ScanInstalled(announce: false);
         UpdateEmpty();
         UpdateCounts();
 
@@ -64,6 +65,35 @@ public partial class MainWindow : Window
     }
 
     private Brush Res(string key) => (Brush)FindResource(key);
+
+    /// <summary>Подхватывает моды, уже лежащие в BepInEx/plugins (поставленные руками).</summary>
+    private void ScanInstalled(bool announce)
+    {
+        try
+        {
+            var found = _lib.SyncInstalled();
+            foreach (var m in found) Attach(m);
+
+            if (found.Count > 0)
+                SetStatus($"Найдено в папке игры: {found.Count} {Plural(found.Count, "мод", "мода", "модов")}", StatusKind.Ok);
+            else if (announce)
+                SetStatus("Новых модов в папке игры не найдено");
+        }
+        catch (Exception ex)
+        {
+            SetStatus("Не удалось просканировать папку игры: " + ex.Message, StatusKind.Error);
+        }
+    }
+
+    private void Rescan_Click(object sender, RoutedEventArgs e)
+    {
+        if (!GameLocator.IsGameDir(_lib.Settings.GameDir))
+        {
+            SetStatus("Сначала укажи папку игры", StatusKind.Error);
+            return;
+        }
+        ScanInstalled(announce: true);
+    }
 
     private void SetStatus(string text, StatusKind kind = StatusKind.Info)
     {
@@ -157,6 +187,7 @@ public partial class MainWindow : Window
         _lib.Save();
         RefreshHeader();
         SetStatus("Папка игры обновлена", StatusKind.Ok);
+        ScanInstalled(announce: false);
     }
 
     private async void InstallBep_Click(object sender, RoutedEventArgs e)

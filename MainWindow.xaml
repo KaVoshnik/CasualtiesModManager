@@ -113,6 +113,8 @@
                             <TextBlock Text="Импорт"/>
                         </StackPanel>
                     </Button>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE72C;" Click="Rescan_Click"
+                            ToolTip="Найти моды, уже установленные в папке игры"/>
                     <Button Style="{StaticResource IconButton}" Content="&#xE8B7;" Click="OpenGameFolder_Click"
                             ToolTip="Открыть папку игры"/>
                 </StackPanel>

@@ -74,6 +74,78 @@ public class ModLibrary
         return mod;
     }
 
+    /// <summary>
+    /// Находит моды, поставленные вручную в BepInEx/plugins, и берёт их под управление:
+    /// копирует в библиотеку (оригиналы в игре не трогает) и помечает как включённые.
+    /// Учитываются одиночные .dll в корне plugins и подпапки, где есть хотя бы один .dll.
+    /// </summary>
+    public List<ModEntry> SyncInstalled()
+    {
+        var added = new List<ModEntry>();
+        var game = Settings.GameDir;
+        if (!GameLocator.IsGameDir(game)) return added;
+
+        var plugins = BepInExInstaller.PluginsDir(game!);
+        if (!Directory.Exists(plugins)) return added;
+
+        // Что уже известно менеджеру (пути относительно папки игры, в нижнем регистре, со слэшем \)
+        static string Norm(string p) => p.Replace('/', '\\').ToLowerInvariant();
+        var known = new HashSet<string>(
+            Settings.Mods.SelectMany(m => m.InstalledFiles).Select(Norm));
+
+        string Rel(string full) => Path.GetRelativePath(game!, full);
+
+        // 1) одиночные .dll в корне plugins
+        foreach (var dll in Directory.EnumerateFiles(plugins, "*.dll", SearchOption.TopDirectoryOnly))
+        {
+            var rel = Rel(dll);
+            if (known.Contains(Norm(rel))) continue;
+
+            var mod = new ModEntry
+            {
+                Name = Path.GetFileNameWithoutExtension(dll),
+                SourceFile = Path.GetFileName(dll),
+                Enabled = true,
+                InstalledFiles = new List<string> { rel },
+            };
+            Directory.CreateDirectory(Path.Combine(ModsDir, mod.Id));
+            File.Copy(dll, SourcePath(mod), overwrite: true);
+            RefreshInfo(mod);
+            Settings.Mods.Add(mod);
+            added.Add(mod);
+        }
+
+        // 2) подпапки с модами
+        foreach (var dir in Directory.EnumerateDirectories(plugins, "*", SearchOption.TopDirectoryOnly))
+        {
+            var files = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).ToList();
+            if (files.Count == 0 || !files.Any(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+                continue; // папка без .dll — это данные какого-то мода, сама по себе модом не считается
+
+            var rels = files.Select(Rel).ToList();
+            if (rels.All(r => known.Contains(Norm(r)))) continue;
+
+            var folderName = Path.GetFileName(dir);
+            var mod = new ModEntry
+            {
+                Name = folderName,
+                SourceFile = folderName + ".zip",
+                Enabled = true,
+                InstalledFiles = rels,
+            };
+            Directory.CreateDirectory(Path.Combine(ModsDir, mod.Id));
+            // в архив кладём папку целиком (Папка/файлы...) — при установке она снова ляжет в plugins/
+            ZipFile.CreateFromDirectory(dir, SourcePath(mod),
+                System.IO.Compression.CompressionLevel.Optimal, includeBaseDirectory: true);
+            RefreshInfo(mod);
+            Settings.Mods.Add(mod);
+            added.Add(mod);
+        }
+
+        if (added.Count > 0) Save();
+        return added;
+    }
+
     public void SetEnabled(ModEntry mod, bool enabled)
     {
         var game = Settings.GameDir;
