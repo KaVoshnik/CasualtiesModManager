@@ -1,0 +1,273 @@
+<Window x:Class="CasualtiesModManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Casualties Mod Manager" Width="900" Height="680" MinWidth="720" MinHeight="500"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
+        FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True"
+        AllowDrop="True" DragEnter="Window_DragOver" DragOver="Window_DragOver"
+        DragLeave="Window_DragLeave" Drop="Window_Drop" StateChanged="Window_StateChanged">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="44" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ===== Заголовок окна ===== -->
+            <Grid Grid.Row="0">
+                <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="24" CornerRadius="6" Background="{StaticResource AccentBrush}">
+                        <TextBlock Text="CU" FontFamily="Bahnschrift" FontWeight="Bold" FontSize="11"
+                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="CASUALTIES MOD MANAGER" FontFamily="Bahnschrift" FontSize="13"
+                               FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click"/>
+                    <Button Style="{StaticResource CaptionButton}" Click="Maximize_Click">
+                        <TextBlock x:Name="MaxGlyph" Text="&#xE922;"/>
+                    </Button>
+                    <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" Click="Close_Click"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- ===== Игра и BepInEx ===== -->
+            <Border Grid.Row="1" Margin="20,4,20,0" Padding="18,14"
+                    Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                    BorderThickness="1" CornerRadius="12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="ИГРА" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource MutedBrush}"/>
+                        <TextBlock x:Name="GamePathText" FontSize="14" Margin="0,3,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="WarningText" Margin="0,6,0,0" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{StaticResource WarnBrush}" Visibility="Collapsed"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource ChipButton}" Click="PickGame_Click" Margin="0,0,8,0"
+                                ToolTip="Выбрать папку с CasualtiesUnknown.exe">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="GameDot" Width="8" Height="8" Margin="0,0,8,0"
+                                         Fill="{StaticResource DangerBrush}"/>
+                                <TextBlock x:Name="GameChipText" Text="Игра не найдена"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource ChipButton}" Click="InstallBep_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="BepDot" Width="8" Height="8" Margin="0,0,8,0"
+                                         Fill="{StaticResource MutedBrush}"/>
+                                <TextBlock x:Name="BepChipText" Text="BepInEx"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ===== Панель действий ===== -->
+            <Grid Grid.Row="2" Margin="20,16,20,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource SecondaryButton}" Click="AddMod_Click" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Foreground="{StaticResource AccentBrush}" Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Добавить мод"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SecondaryButton}" Click="Export_Click" Margin="0,0,8,0"
+                            ToolTip="Сохранить моды в один файл для друзей (выбранные, а если ничего не выбрано, то все)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Экспорт"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SecondaryButton}" Click="Import_Click" Margin="0,0,8,0"
+                            ToolTip="Открыть сборку модов от друга (.cumods)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Импорт"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE8B7;" Click="OpenGameFolder_Click"
+                            ToolTip="Открыть папку игры"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Click="Launch_Click" Padding="22,9">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   Margin="0,1,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Играть"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- ===== Список модов ===== -->
+            <Grid Grid.Row="3" Margin="20,0,10,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Height="36"
+                         Margin="0,0,10,12" TextChanged="SearchBox_TextChanged"/>
+
+                <ListBox x:Name="ModsList" Grid.Row="1" SelectionMode="Extended"
+                         Background="Transparent" BorderThickness="0"
+                         ItemContainerStyle="{StaticResource CardItem}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         KeyDown="ModsList_KeyDown">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Width="46" Height="46" CornerRadius="10"
+                                        Background="{StaticResource AccentDimBrush}">
+                                    <TextBlock Text="{Binding Kind, Mode=OneWay}" FontFamily="Bahnschrift"
+                                               FontWeight="Bold" FontSize="13"
+                                               Foreground="{StaticResource AccentBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name, Mode=OneWay}" FontSize="15" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Enabled}" Value="False">
+                                                        <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding SourceFile, Mode=OneWay}"/>
+                                        <Run Text="  ·  "/>
+                                        <Run Text="{Binding SizeText, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Status, Mode=OneWay}" Margin="0,4,0,0" FontSize="12"
+                                               Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock FontSize="11" FontWeight="SemiBold" MinWidth="34"
+                                               TextAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="ВЫКЛ"/>
+                                                <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Enabled}" Value="True">
+                                                        <Setter Property="Text" Value="ВКЛ"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <CheckBox Style="{StaticResource ToggleSwitch}"
+                                              IsChecked="{Binding Enabled, Mode=OneWay}"
+                                              Tag="{Binding}" Click="Toggle_Click"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="3" Style="{StaticResource IconButton}" Content="&#xE74D;"
+                                        Margin="8,0,0,0" Tag="{Binding}" Click="RemoveOne_Click"
+                                        ToolTip="Удалить мод"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Пустое состояние -->
+                <Grid x:Name="EmptyState" Grid.Row="1" Margin="0,0,10,12">
+                    <Rectangle Stroke="{StaticResource LineBrush}" StrokeThickness="2"
+                               StrokeDashArray="4 4" RadiusX="16" RadiusY="16"/>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="40"
+                                   Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Перетащи сюда моды" FontFamily="Bahnschrift" FontSize="20"
+                                   FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center"/>
+                        <TextBlock Text=".dll или .zip, а также сборки .cumods от друзей" Margin="0,6,0,18"
+                                   Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
+                        <Button Style="{StaticResource PrimaryButton}" Content="Выбрать файлы…"
+                                Click="AddMod_Click" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- ===== Подвал ===== -->
+            <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0"
+                    Padding="20,11" Background="{StaticResource SurfaceBrush}">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Margin="0,1,10,0"
+                                 Fill="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}"
+                                   Text="Готов к работе" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <TextBlock x:Name="CountText" HorizontalAlignment="Right"
+                               Foreground="{StaticResource MutedBrush}"/>
+                </Grid>
+            </Border>
+
+            <!-- ===== Подсветка при перетаскивании файлов ===== -->
+            <Border x:Name="DropOverlay" Grid.Row="1" Grid.RowSpan="4" Visibility="Collapsed"
+                    IsHitTestVisible="False" Background="#E60E0F12">
+                <Grid Margin="20">
+                    <Rectangle Stroke="{StaticResource AccentBrush}" StrokeThickness="2"
+                               StrokeDashArray="5 4" RadiusX="16" RadiusY="16"/>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="44"
+                                   Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Отпусти, чтобы добавить" FontFamily="Bahnschrift" FontSize="22"
+                                   FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

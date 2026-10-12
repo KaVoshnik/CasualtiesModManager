@@ -1,0 +1,39 @@
+# Сборка
+bin/
+obj/
+publish/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.dll
+*.exe
+*.pdb
+*.nupkg
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+launchSettings.json
+
+# Логи и временные файлы
+*.log
+*.tmp
+*.cache
+TestResults/
+
+# ОС
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Сборки модов и архивы для тестов
+*.cumods
+*.zip
