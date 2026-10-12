@@ -89,12 +89,28 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal">
+                <WrapPanel VerticalAlignment="Center">
                     <Button Style="{StaticResource SecondaryButton}" Click="AddMod_Click" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                        Foreground="{StaticResource AccentBrush}" Margin="0,1,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Добавить мод"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SecondaryButton}" Click="Nexus_Click" Margin="0,0,8,0"
+                            ToolTip="Каталог модов Casualties: Unknown на Nexus Mods">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Foreground="{StaticResource AccentBrush}" Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Nexus"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SecondaryButton}" Click="AddByLink_Click" Margin="0,0,8,0"
+                            ToolTip="Скачать мод с GitHub, Nexus Mods или по прямой ссылке — с автообновлением">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE71B;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="По ссылке"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource SecondaryButton}" Click="Export_Click" Margin="0,0,8,0"
@@ -117,7 +133,7 @@
                             ToolTip="Найти моды, уже установленные в папке игры"/>
                     <Button Style="{StaticResource IconButton}" Content="&#xE8B7;" Click="OpenGameFolder_Click"
                             ToolTip="Открыть папку игры"/>
-                </StackPanel>
+                </WrapPanel>
 
                 <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Click="Launch_Click" Padding="22,9">
                     <StackPanel Orientation="Horizontal">
@@ -135,8 +151,28 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Height="36"
-                         Margin="0,0,10,12" TextChanged="SearchBox_TextChanged"/>
+                <Grid Margin="0,0,10,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Height="36"
+                             TextChanged="SearchBox_TextChanged"/>
+                    <Button x:Name="UpdateAllButton" Grid.Column="1" Style="{StaticResource PrimaryButton}"
+                            Height="36" Padding="16,0" Margin="8,0,0,0" Visibility="Collapsed"
+                            Content="Обновить все" Click="UpdateAll_Click"
+                            ToolTip="Установить все найденные обновления"/>
+                    <Button x:Name="CheckButton" Grid.Column="2" Style="{StaticResource SecondaryButton}"
+                            Height="36" Padding="14,0" Margin="8,0,0,0" Click="CheckUpdates_Click"
+                            ToolTip="Проверить, вышли ли новые версии модов">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Обновления"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
 
                 <ListBox x:Name="ModsList" Grid.Row="1" SelectionMode="Extended"
                          Background="Transparent" BorderThickness="0"
@@ -149,6 +185,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
@@ -181,6 +218,18 @@
                                         <Run Text="  ·  "/>
                                         <Run Text="{Binding SizeText, Mode=OneWay}"/>
                                     </TextBlock>
+                                    <TextBlock Text="{Binding SourceText, Mode=OneWay}" Margin="0,3,0,0" FontSize="12"
+                                               Foreground="{StaticResource AccentBrush}" TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SourceText}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                     <TextBlock Text="{Binding Status, Mode=OneWay}" Margin="0,4,0,0" FontSize="12"
                                                Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap">
                                         <TextBlock.Style>
@@ -195,7 +244,24 @@
                                     </TextBlock>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Grid.Column="2" Margin="0,0,14,0" VerticalAlignment="Center"
+                                        Padding="12,6" FontSize="12" Tag="{Binding}" Click="UpdateOne_Click"
+                                        Content="{Binding LatestVersion, Mode=OneWay}"
+                                        ContentStringFormat="Обновить → {0}"
+                                        ToolTip="Установить новую версию">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding UpdateAvailable}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock FontSize="11" FontWeight="SemiBold" MinWidth="34"
                                                TextAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center">
                                         <TextBlock.Style>
@@ -216,9 +282,14 @@
                                               Tag="{Binding}" Click="Toggle_Click"/>
                                 </StackPanel>
 
-                                <Button Grid.Column="3" Style="{StaticResource IconButton}" Content="&#xE74D;"
-                                        Margin="8,0,0,0" Tag="{Binding}" Click="RemoveOne_Click"
-                                        ToolTip="Удалить мод"/>
+                                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE71B;"
+                                            Tag="{Binding}" Click="LinkSource_Click"
+                                            ToolTip="Источник обновлений (GitHub, Nexus или прямая ссылка)"/>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE74D;"
+                                            Tag="{Binding}" Click="RemoveOne_Click"
+                                            ToolTip="Удалить мод"/>
+                                </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

@@ -31,6 +31,12 @@ public static class ModInstaller
                 var rel = MapPath(e.FullName, mode);
                 if (rel == null) continue;
                 var dest = SafeCombine(gameDir, rel);
+                // Настройки пользователя не затираем: если конфиг уже есть, оставляем как есть
+                if (IsConfig(rel) && File.Exists(dest))
+                {
+                    installed.Add(rel);
+                    continue;
+                }
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 e.ExtractToFile(dest, overwrite: true);
                 installed.Add(rel);
@@ -53,6 +59,7 @@ public static class ModInstaller
     {
         foreach (var rel in installedFiles)
         {
+            if (IsConfig(rel)) continue; // конфиги — данные пользователя, при выключении и обновлении их не трогаем
             try
             {
                 var path = SafeCombine(gameDir, rel);
@@ -71,6 +78,9 @@ public static class ModInstaller
             catch { /* файл занят игрой и т.п. — пропускаем */ }
         }
     }
+
+    private static bool IsConfig(string rel) =>
+        rel.Replace('/', '\\').StartsWith(@"BepInEx\config\", StringComparison.OrdinalIgnoreCase);
 
     private enum Mode { FromGameRoot, IntoBepInEx, IntoPlugins }
 
