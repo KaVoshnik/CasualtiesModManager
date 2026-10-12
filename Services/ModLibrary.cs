@@ -26,6 +26,17 @@ public class ModLibrary
             catch { Settings = new(); }
         }
         foreach (var m in Settings.Mods) RefreshInfo(m);
+        NexusService.ApiKey = Settings.NexusApiKey;
+    }
+
+    /// <summary>Сохраняет API-ключ Nexus (пустая строка — забыть ключ).</summary>
+    public void SetNexusKey(string key, string user = "", bool premium = false)
+    {
+        Settings.NexusApiKey = key.Trim();
+        Settings.NexusUser = user;
+        Settings.NexusPremium = premium;
+        NexusService.ApiKey = Settings.NexusApiKey;
+        Save();
     }
 
     /// <summary>Подставляет размер файла для отображения в карточке.</summary>
@@ -53,7 +64,7 @@ public class ModLibrary
     private string SourcePath(ModEntry m) => Path.Combine(ModsDir, m.Id, m.SourceFile);
 
     /// <summary>Добавляет .dll или .zip в библиотеку (копирует). Если игра задана — сразу устанавливает.</summary>
-    public ModEntry Add(string file, bool? enable = null)
+    public ModEntry Add(string file, bool? enable = null, ModSource? source = null, string? name = null)
     {
         var ext = Path.GetExtension(file).ToLowerInvariant();
         if (ext != ".dll" && ext != ".zip")
@@ -61,8 +72,9 @@ public class ModLibrary
 
         var mod = new ModEntry
         {
-            Name = Path.GetFileNameWithoutExtension(file),
+            Name = string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(file) : name.Trim(),
             SourceFile = Path.GetFileName(file),
+            Source = source,
         };
         Directory.CreateDirectory(Path.Combine(ModsDir, mod.Id));
         File.Copy(file, SourcePath(mod), overwrite: true);
@@ -72,6 +84,249 @@ public class ModLibrary
         Save(); // сохраняем до установки: если установка упадёт, мод всё равно останется в списке
         if (enable ?? true) SetEnabled(mod, true);
         return mod;
+    }
+
+    // ---------- Обновления ----------
+
+    /// <summary>Скачивает мод по ссылке (репозиторий GitHub или прямая ссылка), ставит и запоминает источник.</summary>
+    public async Task<ModEntry> AddFromLinkAsync(string link)
+    {
+        var src = UpdateService.ParseLink(link);
+        if (src.Type == "nexus")
+            return (await InstallFromNexusAsync(src.NexusModId, null, null, null)).Mod;
+
+        var info = src.Type == "github"
+            ? await UpdateService.ResolveGitHubAsync(src, null, "")
+            : new UpdateInfo { Url = src.Url, FileName = UpdateService.FileNameFromUrl(src.Url) };
+
+        var tmpDir = Path.Combine(Path.GetTempPath(), "cmm_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tmpDir);
+        try
+        {
+            var tmpFile = Path.Combine(tmpDir, info.FileName);
+            await UpdateService.DownloadAsync(info.Url, tmpFile);
+
+            src.Hash = UpdateService.HashFile(tmpFile);
+            src.AssetName = src.Type == "github" ? info.FileName : "";
+            src.Version = src.Type == "github" ? info.Version : "от " + DateTime.Now.ToString("dd.MM.yyyy");
+            return Add(tmpFile, source: src);
+        }
+        finally
+        {
+            try { Directory.Delete(tmpDir, true); } catch { }
+        }
+    }
+
+    public void SetSource(ModEntry mod, ModSource? source)
+    {
+        mod.Source = source;
+        mod.Pending = null;
+        mod.UpdateAvailable = false;
+        mod.LatestVersion = "";
+        mod.NotifySourceChanged();
+        Save();
+    }
+
+    /// <summary>Проверяет моды с заданным источником. Возвращает (сколько обновлений найдено, сколько проверок не удалось).</summary>
+    public async Task<(int Available, int Failed)> CheckUpdatesAsync(IEnumerable<ModEntry> mods)
+    {
+        int available = 0, failed = 0;
+        foreach (var m in mods.Where(m => m.Source != null).ToList())
+        {
+            if (m.Status.StartsWith("Проверка обновления")) m.Status = "";
+            try
+            {
+                var info = await UpdateService.CheckAsync(m);
+                m.Pending = info;
+                m.LatestVersion = info?.Version ?? "";
+                m.UpdateAvailable = info != null;
+                if (info != null) available++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                m.Status = "Проверка обновления не удалась: " + ex.Message;
+            }
+        }
+        Save();
+        return (available, failed);
+    }
+
+    /// <summary>Скачивает и ставит найденное обновление. Если что-то пошло не так — возвращает старую версию.</summary>
+    public async Task UpdateAsync(ModEntry mod)
+    {
+        var info = mod.Pending ?? throw new InvalidOperationException("Нет доступного обновления");
+        var src = mod.Source ?? throw new InvalidOperationException("У мода нет источника");
+
+        var tmpDir = NewTempDir();
+        try
+        {
+            var url = info.Url;
+            // Nexus: прямую ссылку без похода на сайт отдаёт только Premium
+            if (src.Type == "nexus")
+                url = await NexusService.GetDownloadUrlAsync(src.NexusModId, info.NexusFileId, null, null);
+
+            var tmp = Path.Combine(tmpDir, SafeFileName(info.FileName));
+            await UpdateService.DownloadAsync(url, tmp);
+
+            var newHash = ReplaceFile(mod, tmp);
+
+            src.Version = info.Version;
+            src.AssetName = src.Type == "github" ? info.FileName : "";
+            src.Hash = newHash;
+            if (src.Type == "nexus") src.NexusFileId = info.NexusFileId;
+            if (!string.IsNullOrEmpty(info.ETag)) src.ETag = info.ETag;
+
+            mod.Pending = null;
+            mod.UpdateAvailable = false;
+            mod.LatestVersion = "";
+            mod.NotifySourceChanged();
+            Save();
+        }
+        finally
+        {
+            try { Directory.Delete(tmpDir, true); } catch { }
+        }
+    }
+
+    private static string NewTempDir()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "cmm_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    /// <summary>Имя файла из внешнего источника: только последний сегмент, без недопустимых символов.</summary>
+    private static string SafeFileName(string name)
+    {
+        var n = Path.GetFileName(name.Replace('/', '\\'));
+        foreach (var c in Path.GetInvalidFileNameChars()) n = n.Replace(c, '_');
+        return string.IsNullOrWhiteSpace(n) ? "mod.zip" : n;
+    }
+
+    /// <summary>
+    /// Подменяет файл мода новой версией (tmp). Если мод включён — переустанавливает в игру.
+    /// При ошибке возвращает прежнюю версию. Возвращает SHA-256 нового файла.
+    /// </summary>
+    private string ReplaceFile(ModEntry mod, string tmp)
+    {
+        var ext = Path.GetExtension(tmp).ToLowerInvariant();
+        if (ext != ".dll" && ext != ".zip")
+            throw new InvalidOperationException("Скачан неподдерживаемый файл: " + Path.GetFileName(tmp));
+        var newHash = UpdateService.HashFile(tmp);
+
+        var game = Settings.GameDir;
+        var wasEnabled = mod.Enabled && GameLocator.IsGameDir(game);
+        var oldName = mod.SourceFile;
+        var oldPath = SourcePath(mod);
+        var newPath = Path.Combine(ModsDir, mod.Id, Path.GetFileName(tmp));
+        var backup = oldPath + ".bak";
+
+        File.Copy(oldPath, backup, overwrite: true);
+        try
+        {
+            if (wasEnabled) ModInstaller.Uninstall(game!, mod.InstalledFiles);
+
+            File.Copy(tmp, newPath, overwrite: true);
+            if (!newPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase)) File.Delete(oldPath);
+            mod.SourceFile = Path.GetFileName(tmp);
+
+            if (wasEnabled) mod.InstalledFiles = ModInstaller.Install(game!, newPath);
+        }
+        catch
+        {
+            // откат на прежнюю версию
+            try
+            {
+                var restored = Path.Combine(ModsDir, mod.Id, oldName);
+                File.Copy(backup, restored, overwrite: true);
+                if (!newPath.Equals(restored, StringComparison.OrdinalIgnoreCase) && File.Exists(newPath))
+                    File.Delete(newPath);
+                mod.SourceFile = oldName;
+                if (wasEnabled) mod.InstalledFiles = ModInstaller.Install(game!, restored);
+            }
+            catch { /* откатить не вышло — оставляем как есть, ошибка ниже всё равно будет показана */ }
+            throw;
+        }
+        finally
+        {
+            try { File.Delete(backup); } catch { }
+        }
+
+        RefreshInfo(mod);
+        return newHash;
+    }
+
+    // ---------- Nexus Mods ----------
+
+    /// <summary>Мод из библиотеки, который пришёл с Nexus (по id мода).</summary>
+    public ModEntry? FindNexusMod(int modId) =>
+        Settings.Mods.FirstOrDefault(m => m.Source is { Type: "nexus" } s && s.NexusModId == modId);
+
+    /// <summary>
+    /// Скачивает файл с Nexus и ставит мод. Если мод с Nexus уже есть в библиотеке — заменяет его файл.
+    /// fileId == null → основной файл мода. key/expires — из nxm-ссылки (нужны бесплатным аккаунтам).
+    /// </summary>
+    public async Task<(ModEntry Mod, bool Updated)> InstallFromNexusAsync(
+        int modId, long? fileId, string? nxmKey, long? expires, string? modName = null)
+    {
+        var list = await NexusService.GetFilesAsync(modId);
+        var file = fileId != null
+            ? list.Files.FirstOrDefault(f => f.FileId == fileId)
+            : NexusService.PickMainFile(list);
+        if (file == null)
+            throw new InvalidOperationException(fileId != null ? "Этого файла больше нет на Nexus" : "У мода на Nexus нет файлов");
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext != ".dll" && ext != ".zip")
+            throw new InvalidOperationException(
+                $"Файл «{file.FileName}» не .dll и не .zip — менеджер такое не распаковывает. Скачай и поставь вручную.");
+
+        var url = await NexusService.GetDownloadUrlAsync(modId, file.FileId, nxmKey, expires);
+
+        var tmpDir = NewTempDir();
+        try
+        {
+            var tmp = Path.Combine(tmpDir, SafeFileName(file.FileName));
+            await UpdateService.DownloadAsync(url, tmp);
+
+            var existing = FindNexusMod(modId);
+            if (existing?.Source != null)
+            {
+                var hash = ReplaceFile(existing, tmp);
+                existing.Source.Version = file.Version;
+                existing.Source.NexusFileId = file.FileId;
+                existing.Source.Hash = hash;
+                existing.Pending = null;
+                existing.UpdateAvailable = false;
+                existing.LatestVersion = "";
+                existing.NotifySourceChanged();
+                Save();
+                return (existing, true);
+            }
+
+            var name = modName;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                try { name = (await NexusService.GetModAsync(modId)).Name; }
+                catch { name = null; } // не критично: возьмём имя из файла
+            }
+
+            var src = new ModSource
+            {
+                Type = "nexus",
+                Url = NexusService.ModPageUrl(modId),
+                Version = file.Version,
+                NexusModId = modId,
+                NexusFileId = file.FileId,
+                Hash = UpdateService.HashFile(tmp),
+            };
+            return (Add(tmp, source: src, name: name), false);
+        }
+        finally
+        {
+            try { Directory.Delete(tmpDir, true); } catch { }
+        }
     }
 
     /// <summary>
@@ -198,7 +453,7 @@ public class ModLibrary
         {
             var entryName = $"mods/{i++}_{m.SourceFile}";
             zip.CreateEntryFromFile(SourcePath(m), entryName);
-            manifest.Mods.Add(new PackMod { Name = m.Name, SourceFile = entryName, Enabled = m.Enabled });
+            manifest.Mods.Add(new PackMod { Name = m.Name, SourceFile = entryName, Enabled = m.Enabled, Source = m.Source });
         }
         var e = zip.CreateEntry("manifest.json");
         using var w = new StreamWriter(e.Open());
@@ -222,6 +477,7 @@ public class ModLibrary
             var mod = new ModEntry
             {
                 Name = pm.Name,
+                Source = pm.Source,
                 // имя без префикса «N_»
                 SourceFile = Path.GetFileName(pm.SourceFile) is var f && f.IndexOf('_') > 0 ? f[(f.IndexOf('_') + 1)..] : Path.GetFileName(pm.SourceFile),
             };
