@@ -117,6 +117,22 @@
                             <TextBlock Text="{loc:Tr Btn_ByLink}"/>
                         </StackPanel>
                     </Button>
+                    <Button Style="{StaticResource SecondaryButton}" Click="Nexus_Click" Margin="0,0,8,0"
+                            ToolTip="Каталог модов Casualties: Unknown на Nexus Mods">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Foreground="{StaticResource AccentBrush}" Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Nexus"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SecondaryButton}" Click="AddByLink_Click" Margin="0,0,8,0"
+                            ToolTip="Скачать мод с GitHub, Nexus Mods или по прямой ссылке — с автообновлением">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE71B;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Margin="0,1,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="По ссылке"/>
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource SecondaryButton}" Click="Export_Click" Margin="0,0,8,0"
                             ToolTip="{loc:Tr Tip_Export}">
                         <StackPanel Orientation="Horizontal">
