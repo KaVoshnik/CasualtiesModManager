@@ -27,7 +27,7 @@ public static class UpdateService
         link = link.Trim();
         if (!Uri.TryCreate(link, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
-            throw new InvalidOperationException("Это не похоже на ссылку");
+            throw new InvalidOperationException(Loc.T("E_NotALink"));
 
         // Страница мода на Nexus Mods (только наша игра)
         if (NexusService.TryParseModPage(uri) is int nexusId)
@@ -60,7 +60,7 @@ public static class UpdateService
             return new ModSource { Type = "url", Url = url };
         }
 
-        throw new InvalidOperationException("Нужна ссылка на репозиторий GitHub, страницу мода на Nexus Mods или прямая ссылка на .dll / .zip");
+        throw new InvalidOperationException(Loc.T("E_BadLink"));
     }
 
     public static string FileNameFromUrl(string url) =>
@@ -78,9 +78,9 @@ public static class UpdateService
         using var resp = await Http.SendAsync(req);
 
         if (resp.StatusCode == HttpStatusCode.NotFound)
-            throw new InvalidOperationException("У репозитория нет релизов — вставь прямую ссылку на .dll / .zip");
+            throw new InvalidOperationException(Loc.T("E_NoReleases"));
         if (resp.StatusCode == HttpStatusCode.Forbidden || (int)resp.StatusCode == 429)
-            throw new InvalidOperationException("Лимит запросов GitHub, попробуй через час");
+            throw new InvalidOperationException(Loc.T("E_GitHubRate"));
         resp.EnsureSuccessStatusCode();
 
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
@@ -102,7 +102,7 @@ public static class UpdateService
                         a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             .ToList();
         if (cands.Count == 0)
-            throw new InvalidOperationException("В релизе нет файлов .dll или .zip");
+            throw new InvalidOperationException(Loc.T("E_NoAssets"));
 
         if (!string.IsNullOrEmpty(preferred))
         {
@@ -132,7 +132,7 @@ public static class UpdateService
     /// <summary>Возвращает описание обновления или null, если мод актуален.</summary>
     public static async Task<UpdateInfo?> CheckAsync(ModEntry mod)
     {
-        var src = mod.Source ?? throw new InvalidOperationException("У мода нет источника");
+        var src = mod.Source ?? throw new InvalidOperationException(Loc.T("E_NoSource"));
 
         if (src.Type == "nexus")
         {
@@ -173,7 +173,7 @@ public static class UpdateService
         var date = resp.Content.Headers.LastModified?.LocalDateTime ?? DateTime.Now;
         return new UpdateInfo
         {
-            Version = "от " + date.ToString("dd.MM.yyyy"),
+            Version = date.ToString("yyyy-MM-dd"),
             Url = src.Url,
             FileName = FileNameFromUrl(src.Url),
             ETag = etag,

@@ -21,8 +21,11 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        InitializeComponent();
         _lib.Load();
+        Loc.Init(_lib.Settings.Language);   // язык — до InitializeComponent, чтобы XAML сразу получил нужные тексты
+        InitializeComponent();
+        NexusPane.Init(this, _lib);
+        Loc.LanguageChanged += OnLanguageChanged;
 
         if (!GameLocator.IsGameDir(_lib.Settings.GameDir))
         {
@@ -51,9 +54,11 @@ public partial class MainWindow : Window
 
         var dir = _lib.Settings.GameDir;
         if (!GameLocator.IsGameDir(dir))
-            SetStatus("Игра не найдена — нажми на красную плашку и укажи папку", StatusKind.Error);
+            SetStatus(Loc.T("S_GameNotFoundHint"), StatusKind.Error);
         else if (!BepInExInstaller.IsInstalled(dir!))
-            SetStatus("Сначала установи BepInEx — нажми на жёлтую плашку", StatusKind.Info);
+            SetStatus(Loc.T("S_InstallBepHint"), StatusKind.Info);
+
+        TabMods.IsChecked = true;
 
         // тихая проверка обновлений при запуске
         Loaded += async (_, _) =>
@@ -83,13 +88,13 @@ public partial class MainWindow : Window
             foreach (var m in found) Attach(m);
 
             if (found.Count > 0)
-                SetStatus($"Найдено в папке игры: {found.Count} {Plural(found.Count, "мод", "мода", "модов")}", StatusKind.Ok);
+                SetStatus(Loc.T("S_FoundInGame", found.Count, Loc.Plural(found.Count, "mod")), StatusKind.Ok);
             else if (announce)
-                SetStatus("Новых модов в папке игры не найдено");
+                SetStatus(Loc.T("S_NoNewMods"));
         }
         catch (Exception ex)
         {
-            SetStatus("Не удалось просканировать папку игры: " + ex.Message, StatusKind.Error);
+            SetStatus(Loc.T("S_ScanFailed", ex.Message), StatusKind.Error);
         }
     }
 
@@ -97,7 +102,7 @@ public partial class MainWindow : Window
     {
         if (!GameLocator.IsGameDir(_lib.Settings.GameDir))
         {
-            SetStatus("Сначала укажи папку игры", StatusKind.Error);
+            SetStatus(Loc.T("S_PickGameFirst"), StatusKind.Error);
             return;
         }
         ScanInstalled(announce: true);
@@ -120,17 +125,7 @@ public partial class MainWindow : Window
     private void UpdateCounts()
     {
         var on = _mods.Count(m => m.Enabled);
-        CountText.Text = _mods.Count == 0 ? "" : $"{_mods.Count} {Plural(_mods.Count, "мод", "мода", "модов")} · включено {on}";
-    }
-
-    private static string Plural(int n, string one, string few, string many)
-    {
-        n = Math.Abs(n) % 100;
-        var d = n % 10;
-        if (n is > 10 and < 20) return many;
-        if (d == 1) return one;
-        if (d is >= 2 and <= 4) return few;
-        return many;
+        CountText.Text = _mods.Count == 0 ? "" : Loc.T("S_Count", _mods.Count, Loc.Plural(_mods.Count, "mod"), on);
     }
 
     // ---------- Окно ----------
@@ -152,9 +147,9 @@ public partial class MainWindow : Window
         var dir = _lib.Settings.GameDir;
         var ok = GameLocator.IsGameDir(dir);
 
-        GamePathText.Text = ok ? dir : "Укажи папку с CasualtiesUnknown.exe";
+        GamePathText.Text = ok ? dir : Loc.T("Game_PathPrompt");
         GameDot.Fill = Res(ok ? "OkBrush" : "DangerBrush");
-        GameChipText.Text = ok ? "Игра найдена" : "Игра не найдена";
+        GameChipText.Text = Loc.T(ok ? "Game_Found" : "Game_NotFound");
 
         var bep = ok && BepInExInstaller.IsInstalled(dir!);
         if (!ok)
@@ -165,17 +160,17 @@ public partial class MainWindow : Window
         else if (bep)
         {
             BepDot.Fill = Res("OkBrush");
-            BepChipText.Text = "BepInEx установлен";
+            BepChipText.Text = Loc.T("Bep_Installed");
         }
         else
         {
             BepDot.Fill = Res("WarnBrush");
-            BepChipText.Text = "Установить BepInEx";
+            BepChipText.Text = Loc.T("Bep_Install");
         }
 
         if (ok && GameLocator.HasNonAsciiPath(dir!))
         {
-            WarningText.Text = "В пути к игре есть не-ASCII символы: BepInEx может не загрузить моды. Если не работает — перенеси игру.";
+            WarningText.Text = Loc.T("W_NonAscii");
             WarningText.Visibility = Visibility.Visible;
         }
         else WarningText.Visibility = Visibility.Collapsed;
@@ -183,18 +178,18 @@ public partial class MainWindow : Window
 
     private void PickGame_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFolderDialog { Title = "Папка с CasualtiesUnknown.exe" };
+        var dlg = new OpenFolderDialog { Title = Loc.T("Dlg_PickGameTitle") };
         if (dlg.ShowDialog() != true) return;
 
         if (!GameLocator.IsGameDir(dlg.FolderName))
         {
-            SetStatus("В этой папке нет " + GameLocator.ExeName, StatusKind.Error);
+            SetStatus(Loc.T("S_NoExeInFolder", GameLocator.ExeName), StatusKind.Error);
             return;
         }
         _lib.Settings.GameDir = dlg.FolderName;
         _lib.Save();
         RefreshHeader();
-        SetStatus("Папка игры обновлена", StatusKind.Ok);
+        SetStatus(Loc.T("S_GameFolderUpdated"), StatusKind.Ok);
         ScanInstalled(announce: false);
     }
 
@@ -203,25 +198,25 @@ public partial class MainWindow : Window
         var dir = _lib.Settings.GameDir;
         if (!GameLocator.IsGameDir(dir))
         {
-            SetStatus("Сначала укажи папку игры", StatusKind.Error);
+            SetStatus(Loc.T("S_PickGameFirst"), StatusKind.Error);
             return;
         }
         if (BepInExInstaller.IsInstalled(dir!))
         {
-            SetStatus("BepInEx уже установлен", StatusKind.Ok);
+            SetStatus(Loc.T("S_BepAlready"), StatusKind.Ok);
             return;
         }
 
-        SetStatus("Скачиваю BepInEx…");
+        SetStatus(Loc.T("S_BepDownloading"));
         try
         {
             await BepInExInstaller.InstallAsync(dir!);
-            SetStatus("BepInEx установлен. Запусти игру один раз, чтобы он создал конфиги.", StatusKind.Ok);
-            try { _lib.Reapply(); } catch (Exception ex) { SetStatus("Ошибка: " + ex.Message, StatusKind.Error); }
+            SetStatus(Loc.T("S_BepInstalled"), StatusKind.Ok);
+            try { _lib.Reapply(); } catch (Exception ex) { SetStatus(Loc.T("S_Error", ex.Message), StatusKind.Error); }
         }
         catch (Exception ex)
         {
-            SetStatus("Не удалось скачать BepInEx: " + ex.Message, StatusKind.Error);
+            SetStatus(Loc.T("S_BepFailed", ex.Message), StatusKind.Error);
         }
         RefreshHeader();
     }
@@ -231,7 +226,7 @@ public partial class MainWindow : Window
         var dir = _lib.Settings.GameDir;
         if (!GameLocator.IsGameDir(dir))
         {
-            SetStatus("Папка игры не выбрана", StatusKind.Error);
+            SetStatus(Loc.T("S_NoGameFolder"), StatusKind.Error);
             return;
         }
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true });
@@ -247,8 +242,8 @@ public partial class MainWindow : Window
     {
         var dlg = new OpenFileDialog
         {
-            Title = "Выбери моды",
-            Filter = "Моды и сборки (*.dll;*.zip;*.cumods)|*.dll;*.zip;*.cumods",
+            Title = Loc.T("Dlg_PickModsTitle"),
+            Filter = Loc.T("Dlg_ModsFilter"),
             Multiselect = true,
         };
         if (dlg.ShowDialog() == true) AddFiles(dlg.FileNames);
@@ -312,7 +307,7 @@ public partial class MainWindow : Window
             }
         }
 
-        if (errors.Count == 0) SetStatus($"Добавлено: {added}", StatusKind.Ok);
+        if (errors.Count == 0) SetStatus(Loc.T("S_Added", added), StatusKind.Ok);
         else SetStatus(string.Join("; ", errors), StatusKind.Error);
         RefreshHeader();
     }
@@ -327,7 +322,7 @@ public partial class MainWindow : Window
         {
             _lib.SetEnabled(mod, want);
             mod.Status = "";
-            SetStatus(want ? $"«{mod.Name}» включён" : $"«{mod.Name}» выключен", StatusKind.Ok);
+            SetStatus(Loc.T(want ? "S_ModEnabled" : "S_ModDisabled", Loc.T("Quoted", mod.Name)), StatusKind.Ok);
         }
         catch (Exception ex)
         {
@@ -352,8 +347,8 @@ public partial class MainWindow : Window
     private void RemoveMods(IList<ModEntry> selected)
     {
         if (selected.Count == 0) return;
-        var what = selected.Count == 1 ? $"«{selected[0].Name}»" : $"{selected.Count} {Plural(selected.Count, "мод", "мода", "модов")}";
-        if (MessageBox.Show($"Удалить {what}? Файлы будут убраны из игры.", "Подтверждение",
+        var what = selected.Count == 1 ? Loc.T("Quoted", selected[0].Name) : Loc.T("S_CountPlain", selected.Count, Loc.Plural(selected.Count, "mod"));
+        if (MessageBox.Show(Loc.T("Dlg_RemoveConfirm", what), Loc.T("Dlg_Confirm"),
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
         foreach (var m in selected)
@@ -362,8 +357,8 @@ public partial class MainWindow : Window
             _mods.Remove(m);
         }
         RefreshUpdateUi();
-        _nexus?.RefreshInstalled();
-        SetStatus($"Удалено: {selected.Count}", StatusKind.Ok);
+        NexusPane.RefreshInstalled();
+        SetStatus(Loc.T("S_Removed", selected.Count), StatusKind.Ok);
     }
 
     // ---------- Сборки для друзей ----------
@@ -373,12 +368,12 @@ public partial class MainWindow : Window
         var mods = ModsList.SelectedItems.Count > 0
             ? ModsList.SelectedItems.Cast<ModEntry>().ToList()
             : _mods.ToList();
-        if (mods.Count == 0) { SetStatus("Нечего экспортировать — добавь хотя бы один мод", StatusKind.Error); return; }
+        if (mods.Count == 0) { SetStatus(Loc.T("S_NothingToExport"), StatusKind.Error); return; }
 
         var dlg = new SaveFileDialog
         {
-            Title = "Сохранить сборку",
-            Filter = $"Сборка модов (*{ModLibrary.PackExtension})|*{ModLibrary.PackExtension}",
+            Title = Loc.T("Dlg_SavePackTitle"),
+            Filter = Loc.T("Dlg_PackFilter", ModLibrary.PackExtension),
             FileName = "my-modpack" + ModLibrary.PackExtension,
         };
         if (dlg.ShowDialog() != true) return;
@@ -386,17 +381,17 @@ public partial class MainWindow : Window
         try
         {
             _lib.ExportPack(dlg.FileName, mods);
-            SetStatus($"Сборка сохранена ({mods.Count} {Plural(mods.Count, "мод", "мода", "модов")}). Отправь файл друзьям.", StatusKind.Ok);
+            SetStatus(Loc.T("S_PackSaved", mods.Count, Loc.Plural(mods.Count, "mod")), StatusKind.Ok);
         }
-        catch (Exception ex) { SetStatus("Ошибка экспорта: " + ex.Message, StatusKind.Error); }
+        catch (Exception ex) { SetStatus(Loc.T("S_ExportFailed", ex.Message), StatusKind.Error); }
     }
 
     private void Import_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new OpenFileDialog
         {
-            Title = "Открыть сборку",
-            Filter = $"Сборка модов (*{ModLibrary.PackExtension})|*{ModLibrary.PackExtension}",
+            Title = Loc.T("Dlg_OpenPackTitle"),
+            Filter = Loc.T("Dlg_PackFilter", ModLibrary.PackExtension),
         };
         if (dlg.ShowDialog() == true) AddFiles(new[] { dlg.FileName });
     }
@@ -415,7 +410,7 @@ public partial class MainWindow : Window
     {
         var n = _mods.Count(m => m.UpdateAvailable && !NeedsBrowser(m));
         UpdateAllButton.Visibility = n > 0 ? Visibility.Visible : Visibility.Collapsed;
-        UpdateAllButton.Content = $"Обновить все ({n})";
+        UpdateAllButton.Content = Loc.T("Btn_UpdateAllN", n);
     }
 
     private async Task CheckAllAsync(bool announce)
@@ -425,25 +420,25 @@ public partial class MainWindow : Window
         var withSource = _mods.Where(m => m.Source != null).ToList();
         if (withSource.Count == 0)
         {
-            if (announce) SetStatus("Ни у одного мода не задан источник — нажми значок ссылки на карточке или добавь мод кнопкой «По ссылке»");
+            if (announce) SetStatus(Loc.T("S_NoSources"));
             return;
         }
 
         _busy = true;
         CheckButton.IsEnabled = false;
-        if (announce) SetStatus("Проверяю обновления…");
+        if (announce) SetStatus(Loc.T("S_CheckingUpdates"));
         try
         {
             var (available, failed) = await _lib.CheckUpdatesAsync(withSource);
             RefreshUpdateUi();
 
-            if (available > 0) SetStatus($"Доступны обновления: {available}", StatusKind.Ok);
-            else if (failed > 0) SetStatus("Часть модов проверить не удалось — подробности на карточках", StatusKind.Error);
-            else if (announce) SetStatus("Все моды актуальны", StatusKind.Ok);
+            if (available > 0) SetStatus(Loc.T("S_UpdatesAvailable", available), StatusKind.Ok);
+            else if (failed > 0) SetStatus(Loc.T("S_SomeCheckFailed"), StatusKind.Error);
+            else if (announce) SetStatus(Loc.T("S_AllUpToDate"), StatusKind.Ok);
         }
         catch (Exception ex)
         {
-            SetStatus("Ошибка проверки обновлений: " + ex.Message, StatusKind.Error);
+            SetStatus(Loc.T("S_UpdateCheckError", ex.Message), StatusKind.Error);
         }
         finally
         {
@@ -466,14 +461,14 @@ public partial class MainWindow : Window
                 await OpenNexusDownloadPageAsync(mod.Source!.NexusModId, mod.Pending.NexusFileId, mod.Name);
                 return;
             }
-            SetStatus($"Обновляю «{mod.Name}»…");
+            SetStatus(Loc.T("S_Updating", Loc.T("Quoted", mod.Name)));
             await _lib.UpdateAsync(mod);
-            SetStatus($"«{mod.Name}» обновлён до {mod.Source?.Version}", StatusKind.Ok);
+            SetStatus(Loc.T("S_Updated", Loc.T("Quoted", mod.Name), mod.Source?.Version ?? ""), StatusKind.Ok);
         }
         catch (Exception ex)
         {
-            mod.Status = "Не удалось обновить: " + ex.Message;
-            SetStatus($"«{mod.Name}»: не удалось обновить", StatusKind.Error);
+            mod.Status = Loc.T("S_ModUpdateFailed", ex.Message);
+            SetStatus(Loc.T("S_UpdateFailedShort", Loc.T("Quoted", mod.Name)), StatusKind.Error);
         }
         RefreshUpdateUi();
     }
@@ -496,7 +491,7 @@ public partial class MainWindow : Window
             foreach (var m in pending) await ApplyUpdateAsync(m);
 
             var left = pending.Count(m => m.UpdateAvailable);
-            SetStatus(left == 0 ? $"Обновлено модов: {pending.Count}" : $"Обновлено: {pending.Count - left} из {pending.Count}",
+            SetStatus(left == 0 ? Loc.T("S_UpdatedCount", pending.Count) : Loc.T("S_UpdatedPartial", pending.Count - left, pending.Count),
                 left == 0 ? StatusKind.Ok : StatusKind.Error);
         }
         finally { _busy = false; }
@@ -505,9 +500,8 @@ public partial class MainWindow : Window
     private async void AddByLink_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new LinkDialog(
-            "Добавить мод по ссылке",
-            "Ссылка на репозиторий GitHub (возьмём последний релиз), страницу мода на Nexus Mods или прямая ссылка на .dll / .zip. " +
-            "Менеджер запомнит источник и будет сам находить обновления.",
+            Loc.T("Dlg_AddLinkTitle"),
+            Loc.T("Dlg_AddLinkHint"),
             "", ValidateLink) { Owner = this };
         if (dlg.ShowDialog() != true) return;
 
@@ -519,12 +513,12 @@ public partial class MainWindow : Window
         }
 
         var before = _lib.Settings.Mods.Count;
-        SetStatus("Скачиваю мод…");
+        SetStatus(Loc.T("S_DownloadingMod"));
         try
         {
             var mod = await _lib.AddFromLinkAsync(dlg.Url);
             Attach(mod);
-            SetStatus($"Добавлено: «{mod.Name}»", StatusKind.Ok);
+            SetStatus(Loc.T("S_AddedMod", Loc.T("Quoted", mod.Name)), StatusKind.Ok);
         }
         catch (Exception ex)
         {
@@ -545,9 +539,8 @@ public partial class MainWindow : Window
         if (sender is not Button { Tag: ModEntry mod }) return;
 
         var dlg = new LinkDialog(
-            $"Источник обновлений: {mod.Name}",
-            "Ссылка на репозиторий GitHub, страницу мода на Nexus Mods или прямая ссылка на .dll / .zip. Оставь поле пустым, чтобы убрать источник. " +
-            "Версия уже установленного мода неизвестна, поэтому менеджер сразу предложит обновиться до последней.",
+            Loc.T("Dlg_SourceTitle", mod.Name),
+            Loc.T("Dlg_SourceHint"),
             mod.Source?.Url ?? "",
             s => string.IsNullOrWhiteSpace(s) ? null : ValidateLink(s)) { Owner = this };
         if (dlg.ShowDialog() != true) return;
@@ -556,7 +549,7 @@ public partial class MainWindow : Window
         {
             _lib.SetSource(mod, null);
             RefreshUpdateUi();
-            SetStatus($"Источник у «{mod.Name}» убран");
+            SetStatus(Loc.T("S_SourceRemoved", Loc.T("Quoted", mod.Name)));
             return;
         }
 
@@ -564,21 +557,44 @@ public partial class MainWindow : Window
         await CheckAllAsync(announce: true);
     }
 
-    // ---------- Nexus Mods ----------
+    // ---------- Вкладки, настройки, язык ----------
 
-    private NexusWindow? _nexus;
-
-    private void Nexus_Click(object sender, RoutedEventArgs e)
+    private void Tab_Checked(object sender, RoutedEventArgs e)
     {
-        if (_nexus != null)
-        {
-            _nexus.Activate();
-            return;
-        }
-        _nexus = new NexusWindow(this, _lib) { Owner = this };
-        _nexus.Closed += (_, _) => _nexus = null;
-        _nexus.Show();
+        if (ModsPanel == null || NexusPane == null || ActionsPanel == null) return; // события во время загрузки XAML
+        var nexus = TabNexus.IsChecked == true;
+        ModsPanel.Visibility = nexus ? Visibility.Collapsed : Visibility.Visible;
+        ActionsPanel.Visibility = nexus ? Visibility.Collapsed : Visibility.Visible;
+        NexusPane.Visibility = nexus ? Visibility.Visible : Visibility.Collapsed;
+        if (nexus) _ = NexusPane.EnsureLoadedAsync();
     }
+
+    private void Settings_Click(object sender, RoutedEventArgs e) =>
+        new SettingsDialog(Loc.SetLanguage) { Owner = this }.ShowDialog();
+
+    /// <summary>Язык сменили в настройках: сохраняем и обновляем тексты, которые собираются в коде.</summary>
+    private void OnLanguageChanged()
+    {
+        _lib.Settings.Language = Loc.Lang;
+        _lib.Save();
+
+        foreach (var m in _mods)
+        {
+            m.RefreshLocalized();
+            _lib.RefreshInfo(m);
+        }
+        RefreshHeader();
+        UpdateCounts();
+        RefreshUpdateUi();
+        NexusPane.OnLanguageChanged();
+        SetStatus(Loc.T("Status_Ready"));
+    }
+
+    /// <summary>Показать сообщение в строке состояния (для вкладки Nexus).</summary>
+    internal void ReportStatus(string text, bool error = false) =>
+        SetStatus(text, error ? StatusKind.Error : StatusKind.Info);
+
+    // ---------- Nexus Mods ----------
 
     /// <summary>Бесплатному аккаунту Nexus прямую ссылку на файл не дают — скачивание идёт через сайт и nxm://.</summary>
     private bool NeedsBrowser(ModEntry m) => m.Source?.Type == "nexus" && !_lib.Settings.NexusPremium;
@@ -596,24 +612,23 @@ public partial class MainWindow : Window
     internal async Task<bool> PromptNexusKeyAsync()
     {
         var dlg = new LinkDialog(
-            "API-ключ Nexus Mods",
-            "Личный ключ: nexusmods.com → иконка профиля → Site preferences → вкладка API Keys → «Personal API Key». " +
-            "Ключ хранится только на этом компьютере и в сборки (.cumods) не попадает.",
-            "", s => string.IsNullOrWhiteSpace(s) ? "Вставь ключ" : null) { Owner = this };
+            Loc.T("Dlg_KeyTitle"),
+            Loc.T("Dlg_KeyHint"),
+            "", s => string.IsNullOrWhiteSpace(s) ? Loc.T("Dlg_KeyEmpty") : null) { Owner = this };
         if (dlg.ShowDialog() != true) return false;
         return await ApplyNexusKeyAsync(dlg.Url);
     }
 
     private async Task<bool> ApplyNexusKeyAsync(string key)
     {
-        SetStatus("Проверяю ключ Nexus…");
+        SetStatus(Loc.T("S_CheckingKey"));
         NexusService.ApiKey = key;
         try
         {
             var user = await NexusService.ValidateAsync();
             _lib.SetNexusKey(key, user.Name, user.IsPremium);
-            SetStatus($"Nexus: {user.Name} ({(user.IsPremium ? "Premium" : "бесплатный аккаунт")})", StatusKind.Ok);
-            _nexus?.RefreshAccount();
+            SetStatus(Loc.T("S_NexusAs", user.Name, Loc.T(user.IsPremium ? "Nx_Premium" : "Nx_FreeAccount")), StatusKind.Ok);
+            NexusPane.RefreshAccount();
             return true;
         }
         catch (Exception ex)
@@ -639,19 +654,19 @@ public partial class MainWindow : Window
                 NexusService.UnregisterNxmHandler(_lib.Settings.NxmPreviousHandler);
                 _lib.Settings.NxmPreviousHandler = null;
                 _lib.Save();
-                SetStatus("Приём nxm-ссылок выключен");
+                SetStatus(Loc.T("S_NxmOff"));
             }
             else
             {
                 var previous = NexusService.RegisterNxmHandler();
                 if (previous != null) _lib.Settings.NxmPreviousHandler = previous;
                 _lib.Save();
-                SetStatus("Приём nxm-ссылок включён: кнопки скачивания на Nexus теперь открывают этот менеджер", StatusKind.Ok);
+                SetStatus(Loc.T("S_NxmOn"), StatusKind.Ok);
             }
         }
         catch (Exception ex)
         {
-            SetStatus("Не удалось изменить обработчик nxm: " + ex.Message, StatusKind.Error);
+            SetStatus(Loc.T("S_NxmFailed", ex.Message), StatusKind.Error);
         }
     }
 
@@ -662,17 +677,17 @@ public partial class MainWindow : Window
         if (id is null or 0)
         {
             var main = NexusService.PickMainFile(await NexusService.GetFilesAsync(modId))
-                       ?? throw new InvalidOperationException("У мода на Nexus нет файлов");
+                       ?? throw new InvalidOperationException(Loc.T("E_NexusNoFiles"));
             id = main.FileId;
         }
 
         Process.Start(new ProcessStartInfo(NexusService.FileDownloadPageUrl(modId, id.Value)) { UseShellExecute = true });
 
-        var label = string.IsNullOrWhiteSpace(name) ? $"Мод #{modId}" : $"«{name}»";
+        var label = string.IsNullOrWhiteSpace(name) ? Loc.T("Nx_ModN", modId) : Loc.T("Quoted", name);
         if (NxmOn())
-            SetStatus($"{label}: на открывшейся странице нажми «Slow download» — менеджер скачает и поставит мод сам");
+            SetStatus(Loc.T("S_NexusClickSlow", label));
         else
-            SetStatus($"{label}: включи «Приём nxm-ссылок» в окне Nexus, иначе менеджер не получит файл. Или скачай .zip и перетащи в окно.",
+            SetStatus(Loc.T("S_NexusEnableNxm", label),
                 StatusKind.Error);
     }
 
@@ -681,19 +696,19 @@ public partial class MainWindow : Window
     {
         if (_busy)
         {
-            SetStatus("Подожди, пока закончится текущая операция");
+            SetStatus(Loc.T("S_Busy"));
             return false;
         }
         if (!await EnsureNexusKeyAsync()) return false;
 
-        var name = string.IsNullOrWhiteSpace(item.Name) ? $"мод #{item.ModId}" : $"«{item.Name}»";
+        var name = string.IsNullOrWhiteSpace(item.Name) ? Loc.T("Nx_ModN", item.ModId) : Loc.T("Quoted", item.Name);
         var before = _lib.Settings.Mods.Count;
         _busy = true;
         try
         {
             if (_lib.FindNexusMod(item.ModId) != null)
             {
-                SetStatus($"{name} уже есть в списке — обновления ищи кнопкой «Обновления»");
+                SetStatus(Loc.T("S_NexusAlready", name));
                 return true;
             }
 
@@ -703,7 +718,7 @@ public partial class MainWindow : Window
                 return false;
             }
 
-            SetStatus($"Скачиваю {name} с Nexus…");
+            SetStatus(Loc.T("S_NexusDownloading", name));
             var (mod, updated) = await _lib.InstallFromNexusAsync(item.ModId, null, null, null, item.Name);
             FinishNexusInstall(mod, updated);
             return true;
@@ -738,7 +753,7 @@ public partial class MainWindow : Window
         _busy = true;
         try
         {
-            SetStatus("Скачиваю мод с Nexus…");
+            SetStatus(Loc.T("S_NexusDownloadingAny"));
             var (mod, updated) = await _lib.InstallFromNexusAsync(nxm.ModId, nxm.FileId, nxm.Key, nxm.Expires);
             FinishNexusInstall(mod, updated);
         }
@@ -757,10 +772,10 @@ public partial class MainWindow : Window
     {
         if (!updated) Attach(mod);
         RefreshUpdateUi();
-        _nexus?.RefreshInstalled();
+        NexusPane.RefreshInstalled();
         SetStatus(updated
-            ? $"«{mod.Name}» обновлён до {mod.Source?.Version}"
-            : $"Установлено с Nexus: «{mod.Name}»", StatusKind.Ok);
+            ? Loc.T("S_Updated", Loc.T("Quoted", mod.Name), mod.Source?.Version ?? "")
+            : Loc.T("S_NexusInstalled", Loc.T("Quoted", mod.Name)), StatusKind.Ok);
     }
 
     /// <summary>Мод мог скачаться, но не встать в игру — тогда показываем его в списке с причиной.</summary>
@@ -771,7 +786,7 @@ public partial class MainWindow : Window
             var m = _lib.Settings.Mods[^1];
             m.Status = ex.Message;
             Attach(m);
-            _nexus?.RefreshInstalled();
+            NexusPane.RefreshInstalled();
         }
         SetStatus(ex.Message, StatusKind.Error);
     }
@@ -787,8 +802,8 @@ public partial class MainWindow : Window
                 Process.Start(new ProcessStartInfo(Path.Combine(dir!, GameLocator.ExeName)) { WorkingDirectory = dir, UseShellExecute = true });
             else
                 Process.Start(new ProcessStartInfo($"steam://run/{GameLocator.SteamAppId}") { UseShellExecute = true });
-            SetStatus("Запускаю игру…", StatusKind.Ok);
+            SetStatus(Loc.T("S_Launching"), StatusKind.Ok);
         }
-        catch (Exception ex) { SetStatus("Не удалось запустить: " + ex.Message, StatusKind.Error); }
+        catch (Exception ex) { SetStatus(Loc.T("S_LaunchFailed", ex.Message), StatusKind.Error); }
     }
 }

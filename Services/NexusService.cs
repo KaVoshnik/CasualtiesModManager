@@ -79,7 +79,7 @@ public static class NexusService
 
     private static async Task<JsonDocument> GetJsonAsync(string url)
     {
-        if (!HasKey) throw new NexusException("Нужен API-ключ Nexus Mods");
+        if (!HasKey) throw new NexusException(Loc.T("E_NexusNeedKey"));
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.TryAddWithoutValidation("apikey", ApiKey.Trim());
@@ -90,12 +90,12 @@ public static class NexusService
 
         throw resp.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => new NexusException("Nexus не принял API-ключ — проверь его в настройках"),
+            HttpStatusCode.Unauthorized => new NexusException(Loc.T("E_NexusKeyRejected")),
             HttpStatusCode.Forbidden => new NexusException(
-                "Nexus не отдаёт ссылку на скачивание бесплатным аккаунтам напрямую — файл нужно скачать через сайт"),
-            HttpStatusCode.NotFound => new NexusException("Мод или файл не найден на Nexus"),
-            (HttpStatusCode)429 => new NexusException("Лимит запросов Nexus исчерпан, попробуй позже"),
-            _ => new NexusException($"Nexus ответил ошибкой {(int)resp.StatusCode}"),
+                Loc.T("E_NexusFreeNoDirect")),
+            HttpStatusCode.NotFound => new NexusException(Loc.T("E_NexusNotFound")),
+            (HttpStatusCode)429 => new NexusException(Loc.T("E_NexusRateLimit")),
+            _ => new NexusException(Loc.T("E_NexusHttp", (int)resp.StatusCode)),
         };
     }
 
@@ -178,15 +178,15 @@ public static class NexusService
         req.Headers.TryAddWithoutValidation("apikey", ApiKey.Trim());
         using var resp = await Http.SendAsync(req);
 
-        if (resp.StatusCode == HttpStatusCode.Unauthorized) throw new NexusException("Nexus не принял API-ключ — проверь его в настройках");
-        if ((int)resp.StatusCode == 429) throw new NexusException("Лимит запросов Nexus исчерпан, попробуй позже");
+        if (resp.StatusCode == HttpStatusCode.Unauthorized) throw new NexusException(Loc.T("E_NexusKeyRejected"));
+        if ((int)resp.StatusCode == 429) throw new NexusException(Loc.T("E_NexusRateLimit"));
         resp.EnsureSuccessStatusCode();
 
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
         var root = doc.RootElement;
         if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object ||
             !data.TryGetProperty("mods", out var mods) || mods.ValueKind != JsonValueKind.Object)
-            throw new InvalidOperationException("Неожиданный ответ GraphQL");
+            throw new InvalidOperationException(Loc.T("E_GraphQlBad"));
 
         var list = new List<NexusMod>();
         foreach (var n in mods.GetProperty("nodes").EnumerateArray())
@@ -316,7 +316,7 @@ public static class NexusService
             var uri = Str(l, "URI");
             if (uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return uri;
         }
-        throw new NexusException("Nexus не вернул ссылку на скачивание");
+        throw new NexusException(Loc.T("E_NexusNoLink"));
     }
 
     // ---------- Ссылки ----------
@@ -334,12 +334,12 @@ public static class NexusService
     {
         link = link.Trim().Trim('"');
         if (!Uri.TryCreate(link, UriKind.Absolute, out var uri) || !uri.Scheme.Equals("nxm", StringComparison.OrdinalIgnoreCase))
-            throw new NexusException("Это не nxm-ссылка");
+            throw new NexusException(Loc.T("E_NotNxm"));
 
         var m = NxmRx.Match(uri.GetLeftPart(UriPartial.Path));
-        if (!m.Success) throw new NexusException("Менеджер умеет принимать только nxm-ссылки на отдельные моды (не коллекции)");
+        if (!m.Success) throw new NexusException(Loc.T("E_NxmNotMod"));
         if (!m.Groups["game"].Value.Equals(GameDomain, StringComparison.OrdinalIgnoreCase))
-            throw new NexusException($"Эта ссылка для другой игры ({m.Groups["game"].Value})");
+            throw new NexusException(Loc.T("E_NxmWrongGame", m.Groups["game"].Value));
 
         string? key = null;
         long? expires = null;
@@ -383,9 +383,9 @@ public static class NexusService
     /// <summary>Делает менеджер обработчиком nxm://. Возвращает прежнюю команду (чтобы вернуть её при отключении).</summary>
     public static string? RegisterNxmHandler()
     {
-        var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Не удалось определить путь к программе");
+        var exe = Environment.ProcessPath ?? throw new InvalidOperationException(Loc.T("E_NoExePath"));
         if (Path.GetFileNameWithoutExtension(exe).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Запущено через «dotnet run» — собери .exe (dotnet publish) и включи приём ссылок из него");
+            throw new InvalidOperationException(Loc.T("E_DotnetRun"));
         var previous = IsNxmHandlerOurs() ? null : GetNxmHandlerCommand();
 
         using var root = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(NxmKey);

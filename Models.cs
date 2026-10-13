@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using CasualtiesModManager.Services;
 
 namespace CasualtiesModManager;
 
@@ -98,7 +99,7 @@ public class ModEntry : INotifyPropertyChanged
     public string LatestVersion
     {
         get => _latestVersion;
-        set { _latestVersion = value; OnChanged(); }
+        set { _latestVersion = value; OnChanged(); OnChanged(nameof(UpdateButtonText)); }
     }
 
     /// <summary>Найденное, но ещё не установленное обновление.</summary>
@@ -112,12 +113,23 @@ public class ModEntry : INotifyPropertyChanged
         get
         {
             if (Source == null) return "";
-            var kind = Source.Type switch { "github" => "GitHub", "nexus" => "Nexus", _ => "Ссылка" };
-            return string.IsNullOrEmpty(Source.Version) ? $"{kind} · версия неизвестна" : $"{kind} · {Source.Version}";
+            var kind = Source.Type switch { "github" => "GitHub", "nexus" => "Nexus", _ => Loc.T("Src_Link") };
+            return string.IsNullOrEmpty(Source.Version) ? Loc.T("Src_Unknown", kind) : Loc.T("Src_Known", kind, Source.Version);
         }
     }
 
     public void NotifySourceChanged() => OnChanged(nameof(SourceText));
+
+    /// <summary>Подпись кнопки обновления: «Update → v1.2».</summary>
+    [JsonIgnore]
+    public string UpdateButtonText => Loc.T("Btn_UpdateTo", LatestVersion);
+
+    /// <summary>Пересобрать подписи, зависящие от языка.</summary>
+    public void RefreshLocalized()
+    {
+        OnChanged(nameof(SourceText));
+        OnChanged(nameof(UpdateButtonText));
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnChanged([CallerMemberName] string? n = null) =>
@@ -127,6 +139,9 @@ public class ModEntry : INotifyPropertyChanged
 public class AppSettings
 {
     public string? GameDir { get; set; }
+
+    /// <summary>Язык интерфейса: "en" (по умолчанию) или "ru".</summary>
+    public string Language { get; set; } = "en";
 
     /// <summary>Личный API-ключ Nexus Mods. Лежит только здесь и в сборки (.cumods) не попадает.</summary>
     public string NexusApiKey { get; set; } = "";

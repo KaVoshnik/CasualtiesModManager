@@ -26,13 +26,6 @@ public class NexusCard : INotifyPropertyChanged
         _installed = installed;
         Picture = LoadPicture(mod.PictureUrl);
 
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(mod.Version)) parts.Add("v" + mod.Version.TrimStart('v', 'V'));
-        if (!string.IsNullOrWhiteSpace(mod.Author)) parts.Add(mod.Author);
-        if (mod.Downloads > 0) parts.Add("скачиваний " + mod.Downloads.ToString("N0", CultureInfo.CurrentCulture));
-        if (mod.Endorsements > 0) parts.Add("лайков " + mod.Endorsements.ToString("N0", CultureInfo.CurrentCulture));
-        Meta = string.Join("  ·  ", parts);
-
         // в кратком описании Nexus бывают HTML-теги и сущности
         var text = Regex.Replace(mod.Summary ?? "", "<.*?>", " ");
         Summary = Regex.Replace(WebUtility.HtmlDecode(text), @"\s+", " ").Trim();
@@ -41,8 +34,21 @@ public class NexusCard : INotifyPropertyChanged
     public NexusMod Mod { get; }
     public string Name => Mod.Name;
     public string Summary { get; }
-    public string Meta { get; }
     public ImageSource? Picture { get; }
+
+    /// <summary>«v1.2 · автор · 1 234 downloads · 56 likes» — собирается заново при смене языка.</summary>
+    public string Meta
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Mod.Version)) parts.Add("v" + Mod.Version.TrimStart('v', 'V'));
+            if (!string.IsNullOrWhiteSpace(Mod.Author)) parts.Add(Mod.Author);
+            if (Mod.Downloads > 0) parts.Add(Loc.T("Nx_Downloads", Mod.Downloads.ToString("N0", CultureInfo.CurrentCulture)));
+            if (Mod.Endorsements > 0) parts.Add(Loc.T("Nx_Likes", Mod.Endorsements.ToString("N0", CultureInfo.CurrentCulture)));
+            return string.Join("  ·  ", parts);
+        }
+    }
 
     public bool Installed
     {
@@ -56,8 +62,14 @@ public class NexusCard : INotifyPropertyChanged
         set { _busy = value; Changed(); Changed(nameof(ButtonText)); Changed(nameof(CanInstall)); }
     }
 
-    public string ButtonText => Busy ? "Устанавливаю…" : Installed ? "Установлен" : "Установить";
+    public string ButtonText => Loc.T(Busy ? "Nx_Installing" : Installed ? "Nx_Installed" : "Nx_Install");
     public bool CanInstall => !Busy && !Installed;
+
+    public void RefreshLocalized()
+    {
+        Changed(nameof(Meta));
+        Changed(nameof(ButtonText));
+    }
 
     private static ImageSource? LoadPicture(string url)
     {
@@ -79,12 +91,13 @@ public class NexusCard : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 }
 
-public partial class NexusWindow : Window
+/// <summary>Вкладка «Nexus» в главном окне: каталог модов с поиском и установкой.</summary>
+public partial class NexusView : UserControl
 {
     private const int PageSize = 20;
 
-    private readonly MainWindow _main;
-    private readonly ModLibrary _lib;
+    private MainWindow? _main;
+    private ModLibrary? _lib;
     private readonly ObservableCollection<NexusCard> _cards = new();
     private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromMilliseconds(450) };
 
@@ -92,12 +105,11 @@ public partial class NexusWindow : Window
     private int _generation;   // чтобы запоздавший ответ на старый запрос не затёр новый
     private int _offset;
     private int _total;
+    private bool _started;
 
-    public NexusWindow(MainWindow main, ModLibrary lib)
+    public NexusView()
     {
         InitializeComponent();
-        _main = main;
-        _lib = lib;
         ModsList.ItemsSource = _cards;
 
         _debounce.Tick += async (_, _) =>
@@ -105,55 +117,72 @@ public partial class NexusWindow : Window
             _debounce.Stop();
             await LoadAsync(reset: true);
         };
+    }
 
+    /// <summary>Подключает вкладку к главному окну (вызывается один раз при создании окна).</summary>
+    public void Init(MainWindow main, ModLibrary lib)
+    {
+        _main = main;
+        _lib = lib;
         RefreshAccount();
         HighlightSort();
+    }
 
-        Loaded += async (_, _) =>
-        {
-            if (!NexusService.HasKey) await _main.EnsureNexusKeyAsync();
-            RefreshAccount();
-            await LoadAsync(reset: true);
-        };
+    /// <summary>Вызывается при первом показе вкладки: спрашивает ключ, если его нет, и грузит каталог.</summary>
+    public async Task EnsureLoadedAsync()
+    {
+        if (_started || _main == null) return;
+        _started = true;
+
+        if (!NexusService.HasKey) await _main.EnsureNexusKeyAsync();
+        RefreshAccount();
+        await LoadAsync(reset: true);
     }
 
     // ---------- Состояние ----------
 
     private Brush Res(string key) => (Brush)FindResource(key);
 
-    private void SetStatus(string text, bool error = false)
-    {
-        StatusText.Text = text;
-        StatusDot.Fill = Res(error ? "DangerBrush" : "MutedBrush");
-    }
+    private void SetStatus(string text, bool error = false) => _main?.ReportStatus(text, error);
 
-    /// <summary>Обновляет плашки аккаунта и nxm. Вызывается и из главного окна.</summary>
+    /// <summary>Обновляет плашки аккаунта и nxm, подписи карточек. Вызывается и из главного окна.</summary>
     public void RefreshAccount()
     {
+        if (_lib == null) return;
         var s = _lib.Settings;
         if (NexusService.HasKey)
         {
             AccountDot.Fill = Res("OkBrush");
-            var who = string.IsNullOrEmpty(s.NexusUser) ? "ключ задан" : s.NexusUser;
-            AccountText.Text = $"Nexus: {who} · {(s.NexusPremium ? "Premium" : "бесплатный")}";
+            var who = string.IsNullOrEmpty(s.NexusUser) ? Loc.T("Nx_KeySet") : s.NexusUser;
+            AccountText.Text = Loc.T("Nx_Account", who, Loc.T(s.NexusPremium ? "Nx_Premium" : "Nx_AccountFree"));
         }
         else
         {
             AccountDot.Fill = Res("DangerBrush");
-            AccountText.Text = "Нужен API-ключ";
+            AccountText.Text = Loc.T("Nx_NeedKey");
         }
 
         var nxm = false;
         try { nxm = NexusService.IsNxmHandlerOurs(); } catch { }
         NxmDot.Fill = Res(nxm ? "OkBrush" : "MutedBrush");
-        NxmText.Text = "Приём nxm-ссылок: " + (nxm ? "вкл" : "выкл");
+        NxmText.Text = Loc.T(nxm ? "Nx_NxmOn" : "Nx_NxmOff");
 
         FreeNote.Visibility = NexusService.HasKey && !s.NexusPremium ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>Проставляет «Установлен» на карточках (после установки или удаления модов).</summary>
+    /// <summary>Язык сменился: обновляем всё, что собрано в коде.</summary>
+    public void OnLanguageChanged()
+    {
+        RefreshAccount();
+        foreach (var c in _cards) c.RefreshLocalized();
+        if (EmptyText.Visibility == Visibility.Visible && _cards.Count == 0)
+            EmptyText.Text = Loc.T(NexusService.HasKey ? "Nx_NothingFound" : "Nx_NoKeyHint");
+    }
+
+    /// <summary>Проставляет «Installed» на карточках (после установки или удаления модов).</summary>
     public void RefreshInstalled()
     {
+        if (_lib == null) return;
         foreach (var c in _cards) c.Installed = _lib.FindNexusMod(c.Mod.ModId) != null;
     }
 
@@ -171,6 +200,8 @@ public partial class NexusWindow : Window
 
     private async Task LoadAsync(bool reset)
     {
+        if (_lib == null) return;
+
         var gen = ++_generation;
         if (reset)
         {
@@ -182,14 +213,14 @@ public partial class NexusWindow : Window
 
         if (!NexusService.HasKey)
         {
-            EmptyText.Text = "Чтобы смотреть каталог, нужен личный API-ключ Nexus Mods. Нажми плашку «Нужен API-ключ».";
+            EmptyText.Text = Loc.T("Nx_NoKeyHint");
             EmptyText.Visibility = Visibility.Visible;
-            SetStatus("API-ключ не задан");
+            SetStatus(Loc.T("Nx_NoKeyStatus"));
             return;
         }
 
         EmptyText.Visibility = Visibility.Collapsed;
-        SetStatus("Загружаю каталог…");
+        SetStatus(Loc.T("Nx_Loading"));
         try
         {
             var page = await NexusService.BrowseAsync(SearchBox.Text, _sort, _offset, PageSize);
@@ -205,13 +236,11 @@ public partial class NexusWindow : Window
 
             if (_cards.Count == 0)
             {
-                EmptyText.Text = "Ничего не найдено";
+                EmptyText.Text = Loc.T("Nx_NothingFound");
                 EmptyText.Visibility = Visibility.Visible;
             }
 
-            SetStatus(page.Fallback
-                ? "Поиск по всему каталогу сейчас недоступен — показаны подборки Nexus (по 10 модов)"
-                : $"Показано {_cards.Count} из {_total}");
+            SetStatus(page.Fallback ? Loc.T("Nx_Fallback") : Loc.T("Nx_Shown", _cards.Count, _total));
         }
         catch (Exception ex)
         {
@@ -229,6 +258,7 @@ public partial class NexusWindow : Window
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if (!_started) return; // пока вкладку не открывали, ничего не грузим
         _debounce.Stop();
         _debounce.Start();
     }
@@ -245,7 +275,7 @@ public partial class NexusWindow : Window
 
     private async void Account_Click(object sender, RoutedEventArgs e)
     {
-        if (await _main.PromptNexusKeyAsync())
+        if (_main != null && await _main.PromptNexusKeyAsync())
         {
             RefreshAccount();
             await LoadAsync(reset: true);
@@ -254,12 +284,13 @@ public partial class NexusWindow : Window
 
     private void Nxm_Click(object sender, RoutedEventArgs e)
     {
-        _main.ToggleNxmHandler();
+        _main?.ToggleNxmHandler();
         RefreshAccount();
     }
 
     private async void Install_Click(object sender, RoutedEventArgs e)
     {
+        if (_main == null || _lib == null) return;
         if (sender is not Button { Tag: NexusCard card } || !card.CanInstall) return;
 
         card.Busy = true;
@@ -276,8 +307,6 @@ public partial class NexusWindow : Window
     {
         if (sender is not Button { Tag: NexusCard card }) return;
         try { Process.Start(new ProcessStartInfo(card.Mod.PageUrl) { UseShellExecute = true }); }
-        catch (Exception ex) { SetStatus("Не удалось открыть браузер: " + ex.Message, error: true); }
+        catch (Exception ex) { SetStatus(Loc.T("Nx_BrowserFailed", ex.Message), error: true); }
     }
-
-    private void Close_Click(object sender, RoutedEventArgs e) => Close();
 }

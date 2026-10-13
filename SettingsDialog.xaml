@@ -1,0 +1,31 @@
+<Window x:Class="CasualtiesModManager.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CasualtiesModManager"
+        Width="420" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
+        FontFamily="Segoe UI" FontSize="13" PreviewKeyDown="Window_PreviewKeyDown">
+    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1" Padding="24,20,24,22">
+        <StackPanel>
+            <TextBlock Text="{loc:Tr Set_Title}" FontFamily="Bahnschrift" FontSize="18" FontWeight="SemiBold"
+                       Cursor="SizeAll" MouseLeftButtonDown="Title_MouseDown"/>
+
+            <TextBlock Text="{loc:Tr Set_Language}" Margin="0,18,0,8" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{StaticResource MutedBrush}"/>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="LangEn" Style="{StaticResource ChipButton}" Content="English" Tag="en"
+                        Click="Lang_Click" Margin="0,0,8,0"/>
+                <Button x:Name="LangRu" Style="{StaticResource ChipButton}" Content="Русский" Tag="ru"
+                        Click="Lang_Click"/>
+            </StackPanel>
+            <TextBlock Text="{loc:Tr Set_LanguageHint}" Margin="0,8,0,0" FontSize="12"
+                       Foreground="{StaticResource MutedBrush}"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                <Button Style="{StaticResource PrimaryButton}" Content="{loc:Tr Set_Close}" IsDefault="True"
+                        IsCancel="True" Padding="22,9" Click="Close_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

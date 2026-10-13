@@ -47,9 +47,9 @@ public class ModLibrary
             var len = new FileInfo(SourcePath(m)).Length;
             m.SizeText = len switch
             {
-                < 1024 => $"{len} Б",
-                < 1024 * 1024 => $"{len / 1024.0:0.#} КБ",
-                _ => $"{len / 1024.0 / 1024.0:0.#} МБ",
+                < 1024 => $"{len} {Loc.T("Size_B")}",
+                < 1024 * 1024 => $"{len / 1024.0:0.#} {Loc.T("Size_KB")}",
+                _ => $"{len / 1024.0 / 1024.0:0.#} {Loc.T("Size_MB")}",
             };
         }
         catch { m.SizeText = ""; }
@@ -68,7 +68,7 @@ public class ModLibrary
     {
         var ext = Path.GetExtension(file).ToLowerInvariant();
         if (ext != ".dll" && ext != ".zip")
-            throw new InvalidOperationException("Поддерживаются только .dll и .zip");
+            throw new InvalidOperationException(Loc.T("E_OnlyDllZip"));
 
         var mod = new ModEntry
         {
@@ -108,7 +108,7 @@ public class ModLibrary
 
             src.Hash = UpdateService.HashFile(tmpFile);
             src.AssetName = src.Type == "github" ? info.FileName : "";
-            src.Version = src.Type == "github" ? info.Version : "от " + DateTime.Now.ToString("dd.MM.yyyy");
+            src.Version = src.Type == "github" ? info.Version : DateTime.Now.ToString("yyyy-MM-dd");
             return Add(tmpFile, source: src);
         }
         finally
@@ -133,7 +133,7 @@ public class ModLibrary
         int available = 0, failed = 0;
         foreach (var m in mods.Where(m => m.Source != null).ToList())
         {
-            if (m.Status.StartsWith("Проверка обновления")) m.Status = "";
+            if (m.Status.StartsWith(Loc.T("S_ModCheckFailed", ""))) m.Status = "";
             try
             {
                 var info = await UpdateService.CheckAsync(m);
@@ -145,7 +145,7 @@ public class ModLibrary
             catch (Exception ex)
             {
                 failed++;
-                m.Status = "Проверка обновления не удалась: " + ex.Message;
+                m.Status = Loc.T("S_ModCheckFailed", ex.Message);
             }
         }
         Save();
@@ -155,8 +155,8 @@ public class ModLibrary
     /// <summary>Скачивает и ставит найденное обновление. Если что-то пошло не так — возвращает старую версию.</summary>
     public async Task UpdateAsync(ModEntry mod)
     {
-        var info = mod.Pending ?? throw new InvalidOperationException("Нет доступного обновления");
-        var src = mod.Source ?? throw new InvalidOperationException("У мода нет источника");
+        var info = mod.Pending ?? throw new InvalidOperationException(Loc.T("E_NoPendingUpdate"));
+        var src = mod.Source ?? throw new InvalidOperationException(Loc.T("E_NoSource"));
 
         var tmpDir = NewTempDir();
         try
@@ -212,7 +212,7 @@ public class ModLibrary
     {
         var ext = Path.GetExtension(tmp).ToLowerInvariant();
         if (ext != ".dll" && ext != ".zip")
-            throw new InvalidOperationException("Скачан неподдерживаемый файл: " + Path.GetFileName(tmp));
+            throw new InvalidOperationException(Loc.T("E_UnsupportedFile", Path.GetFileName(tmp)));
         var newHash = UpdateService.HashFile(tmp);
 
         var game = Settings.GameDir;
@@ -275,12 +275,12 @@ public class ModLibrary
             ? list.Files.FirstOrDefault(f => f.FileId == fileId)
             : NexusService.PickMainFile(list);
         if (file == null)
-            throw new InvalidOperationException(fileId != null ? "Этого файла больше нет на Nexus" : "У мода на Nexus нет файлов");
+            throw new InvalidOperationException(Loc.T(fileId != null ? "E_NexusFileGone" : "E_NexusNoFiles"));
 
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (ext != ".dll" && ext != ".zip")
             throw new InvalidOperationException(
-                $"Файл «{file.FileName}» не .dll и не .zip — менеджер такое не распаковывает. Скачай и поставь вручную.");
+                Loc.T("E_NexusBadType", file.FileName));
 
         var url = await NexusService.GetDownloadUrlAsync(modId, file.FileId, nxmKey, expires);
 
@@ -407,13 +407,13 @@ public class ModLibrary
         if (!GameLocator.IsGameDir(game))
         {
             mod.Enabled = false;
-            throw new InvalidOperationException("Папка игры не выбрана");
+            throw new InvalidOperationException(Loc.T("E_NoGameFolder"));
         }
 
         if (enabled)
         {
             if (!BepInExInstaller.IsInstalled(game!))
-                throw new InvalidOperationException("BepInEx не установлен — нажми «Установить BepInEx»");
+                throw new InvalidOperationException(Loc.T("E_BepMissing"));
             mod.InstalledFiles = ModInstaller.Install(game!, SourcePath(mod));
         }
         else
@@ -464,7 +464,7 @@ public class ModLibrary
     {
         var added = new List<ModEntry>();
         using var zip = ZipFile.OpenRead(packPath);
-        var mEntry = zip.GetEntry("manifest.json") ?? throw new InvalidOperationException("Это не файл сборки (нет manifest.json)");
+        var mEntry = zip.GetEntry("manifest.json") ?? throw new InvalidOperationException(Loc.T("E_NotAPack"));
         PackManifest manifest;
         using (var r = new StreamReader(mEntry.Open()))
             manifest = JsonSerializer.Deserialize<PackManifest>(r.ReadToEnd()) ?? new();

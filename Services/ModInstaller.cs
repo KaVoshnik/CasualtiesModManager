@@ -122,7 +122,7 @@ public static class ModInstaller
         var full = Path.GetFullPath(Path.Combine(root, rel));
         var rootFull = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Недопустимый путь в архиве: " + rel);
+            throw new InvalidOperationException(Loc.T("E_BadArchivePath", rel));
         return full;
     }
 }
