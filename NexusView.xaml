@@ -1,0 +1,120 @@
+<UserControl x:Class="CasualtiesModManager.NexusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:CasualtiesModManager"
+             Foreground="{StaticResource TextBrush}" FontFamily="Segoe UI" FontSize="13">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== Аккаунт и nxm ===== -->
+        <Border Grid.Row="0" Margin="0,0,10,0" Padding="16,12"
+                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                BorderThickness="1" CornerRadius="12">
+            <StackPanel>
+                <WrapPanel>
+                    <Button Style="{StaticResource ChipButton}" Click="Account_Click" Margin="0,0,8,0"
+                            ToolTip="{loc:Tr Tip_Account}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="AccountDot" Width="8" Height="8" Margin="0,0,8,0"
+                                     Fill="{StaticResource DangerBrush}"/>
+                            <TextBlock x:Name="AccountText"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ChipButton}" Click="Nxm_Click"
+                            ToolTip="{loc:Tr Tip_Nxm}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="NxmDot" Width="8" Height="8" Margin="0,0,8,0"
+                                     Fill="{StaticResource MutedBrush}"/>
+                            <TextBlock x:Name="NxmText"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+                <TextBlock x:Name="FreeNote" Margin="0,10,0,0" FontSize="12" TextWrapping="Wrap"
+                           Foreground="{StaticResource WarnBrush}" Visibility="Collapsed"
+                           Text="{loc:Tr Nx_FreeNote}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== Поиск и сортировка ===== -->
+        <Grid Grid.Row="1" Margin="0,14,10,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" Height="36"
+                     TextChanged="SearchBox_TextChanged"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
+                <Button x:Name="SortPopular" Style="{StaticResource ChipButton}" Tag="Popular" Click="Sort_Click"
+                        Content="{loc:Tr Nx_Popular}" Margin="0,0,6,0"/>
+                <Button x:Name="SortNewest" Style="{StaticResource ChipButton}" Tag="Newest" Click="Sort_Click"
+                        Content="{loc:Tr Nx_Newest}" Margin="0,0,6,0"/>
+                <Button x:Name="SortUpdated" Style="{StaticResource ChipButton}" Tag="Updated" Click="Sort_Click"
+                        Content="{loc:Tr Nx_Updated}" Margin="0,0,6,0"/>
+                <Button x:Name="SortEndorsed" Style="{StaticResource ChipButton}" Tag="Endorsed" Click="Sort_Click"
+                        Content="{loc:Tr Nx_Endorsed}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== Каталог ===== -->
+        <Grid Grid.Row="2">
+            <ListBox x:Name="ModsList" SelectionMode="Single"
+                     Background="Transparent" BorderThickness="0"
+                     ItemContainerStyle="{StaticResource CardItem}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Width="64" Height="64" CornerRadius="10" ClipToBounds="True"
+                                    Background="{StaticResource AccentDimBrush}" VerticalAlignment="Top">
+                                <Image Source="{Binding Picture, Mode=OneWay}" Stretch="UniformToFill"/>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name, Mode=OneWay}" FontSize="15" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Summary, Mode=OneWay}" Margin="0,3,0,0" FontSize="12"
+                                           TextWrapping="Wrap" MaxHeight="34" TextTrimming="CharacterEllipsis"
+                                           Foreground="{StaticResource MutedBrush}"/>
+                                <TextBlock Text="{Binding Meta, Mode=OneWay}" Margin="0,4,0,0" FontSize="12"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource PrimaryButton}" Padding="16,7" FontSize="12"
+                                        MinWidth="104" Margin="0,0,6,0"
+                                        Content="{Binding ButtonText, Mode=OneWay}"
+                                        IsEnabled="{Binding CanInstall, Mode=OneWay}"
+                                        Tag="{Binding}" Click="Install_Click"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE8A7;"
+                                        Tag="{Binding}" Click="OpenPage_Click"
+                                        ToolTip="{loc:Tr Tip_OpenPage}"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock x:Name="EmptyText" Visibility="Collapsed" HorizontalAlignment="Center"
+                       VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                       Foreground="{StaticResource MutedBrush}" FontSize="14"/>
+        </Grid>
+
+        <!-- ===== Ещё ===== -->
+        <Button x:Name="MoreButton" Grid.Row="3" Style="{StaticResource SecondaryButton}"
+                Content="{loc:Tr Nx_More}" Padding="22,7" Margin="0,4,10,10"
+                HorizontalAlignment="Center" Visibility="Collapsed" Click="More_Click"/>
+    </Grid>
+</UserControl>
