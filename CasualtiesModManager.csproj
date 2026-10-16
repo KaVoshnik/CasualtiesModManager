@@ -8,6 +8,15 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>CasualtiesModManager</AssemblyName>
     <RootNamespace>CasualtiesModManager</RootNamespace>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <!-- Версия приложения: по ней менеджер понимает, вышло ли обновление на GitHub. Меняй вместе с тегом релиза. -->
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
 
 </Project>

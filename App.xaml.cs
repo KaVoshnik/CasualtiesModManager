@@ -17,6 +17,9 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // нас перезапустило автообновление — ждём, пока старая копия закроется
+        SelfUpdater.WaitForPreviousProcess(e.Args);
+
         var nxm = e.Args.FirstOrDefault(NexusService.IsNxm);
 
         // Браузер запускает новый процесс на каждую nxm-ссылку. Передаём её уже работающему менеджеру и выходим.
@@ -29,6 +32,7 @@ public partial class App : Application
         }
 
         StartupNxm = nxm;
+        SelfUpdater.CleanupOld();
         base.OnStartup(e);
         _ = Task.Run(ListenAsync);
     }

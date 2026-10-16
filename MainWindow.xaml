@@ -4,8 +4,8 @@
         xmlns:loc="clr-namespace:CasualtiesModManager"
         Title="Casualties Mod Manager" Width="900" Height="680" MinWidth="720" MinHeight="500"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
-        FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True"
+        Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
+        Icon="app.ico" FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True"
         AllowDrop="True" DragEnter="Window_DragOver" DragOver="Window_DragOver"
         DragLeave="Window_DragLeave" Drop="Window_Drop" StateChanged="Window_StateChanged">
 
@@ -14,7 +14,7 @@
                       CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
-    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+    <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>
@@ -27,7 +27,7 @@
             <!-- ===== Заголовок окна ===== -->
             <Grid Grid.Row="0">
                 <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <Border Width="24" Height="24" CornerRadius="6" Background="{StaticResource AccentBrush}">
+                    <Border Width="24" Height="24" CornerRadius="6" Background="{DynamicResource AccentBrush}">
                         <TextBlock Text="CU" FontFamily="Bahnschrift" FontWeight="Bold" FontSize="11"
                                    Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
@@ -48,7 +48,7 @@
 
             <!-- ===== Игра и BepInEx ===== -->
             <Border Grid.Row="1" Margin="20,4,20,0" Padding="18,14"
-                    Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource LineBrush}"
                     BorderThickness="1" CornerRadius="12">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -58,11 +58,11 @@
 
                     <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                         <TextBlock Text="{loc:Tr Game_Label}" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedBrush}"/>
+                                   Foreground="{DynamicResource MutedBrush}"/>
                         <TextBlock x:Name="GamePathText" FontSize="14" Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock x:Name="WarningText" Margin="0,6,0,0" FontSize="12" TextWrapping="Wrap"
-                                   Foreground="{StaticResource WarnBrush}" Visibility="Collapsed"/>
+                                   Foreground="{DynamicResource WarnBrush}" Visibility="Collapsed"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -70,14 +70,14 @@
                                 ToolTip="{loc:Tr Game_PickTip}">
                             <StackPanel Orientation="Horizontal">
                                 <Ellipse x:Name="GameDot" Width="8" Height="8" Margin="0,0,8,0"
-                                         Fill="{StaticResource DangerBrush}"/>
+                                         Fill="{DynamicResource DangerBrush}"/>
                                 <TextBlock x:Name="GameChipText" Text="{loc:Tr Game_NotFound}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource ChipButton}" Click="InstallBep_Click">
                             <StackPanel Orientation="Horizontal">
                                 <Ellipse x:Name="BepDot" Width="8" Height="8" Margin="0,0,8,0"
-                                         Fill="{StaticResource MutedBrush}"/>
+                                         Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock x:Name="BepChipText" Text="BepInEx"/>
                             </StackPanel>
                         </Button>
@@ -105,7 +105,7 @@
                     <Button Style="{StaticResource SecondaryButton}" Click="AddMod_Click" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                       Foreground="{StaticResource AccentBrush}" Margin="0,1,8,0" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource AccentBrush}" Margin="0,1,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{loc:Tr Btn_AddMod}"/>
                         </StackPanel>
                     </Button>
@@ -195,10 +195,10 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Border Width="46" Height="46" CornerRadius="10"
-                                        Background="{StaticResource AccentDimBrush}">
+                                        Background="{DynamicResource AccentDimBrush}">
                                     <TextBlock Text="{Binding Kind, Mode=OneWay}" FontFamily="Bahnschrift"
                                                FontWeight="Bold" FontSize="13"
-                                               Foreground="{StaticResource AccentBrush}"
+                                               Foreground="{DynamicResource AccentBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
 
@@ -207,23 +207,23 @@
                                                TextTrimming="CharacterEllipsis">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Enabled}" Value="False">
-                                                        <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </TextBlock.Style>
                                     </TextBlock>
-                                    <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                                    <TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{DynamicResource MutedBrush}"
                                                TextTrimming="CharacterEllipsis">
                                         <Run Text="{Binding SourceFile, Mode=OneWay}"/>
                                         <Run Text="  ·  "/>
                                         <Run Text="{Binding SizeText, Mode=OneWay}"/>
                                     </TextBlock>
                                     <TextBlock Text="{Binding SourceText, Mode=OneWay}" Margin="0,3,0,0" FontSize="12"
-                                               Foreground="{StaticResource AccentBrush}" TextTrimming="CharacterEllipsis">
+                                               Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Style.Triggers>
@@ -235,7 +235,7 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                     <TextBlock Text="{Binding Status, Mode=OneWay}" Margin="0,4,0,0" FontSize="12"
-                                               Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap">
+                                               Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Style.Triggers>
@@ -270,11 +270,11 @@
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Text" Value="{loc:Tr Toggle_Off}"/>
-                                                <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Enabled}" Value="True">
                                                         <Setter Property="Text" Value="{loc:Tr Toggle_On}"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource OkBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -300,15 +300,15 @@
 
                 <!-- Пустое состояние -->
                 <Grid x:Name="EmptyState" Grid.Row="1" Margin="0,0,10,12">
-                    <Rectangle Stroke="{StaticResource LineBrush}" StrokeThickness="2"
+                    <Rectangle Stroke="{DynamicResource LineBrush}" StrokeThickness="2"
                                StrokeDashArray="4 4" RadiusX="16" RadiusY="16"/>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="40"
-                                   Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{loc:Tr Empty_Title}" FontFamily="Bahnschrift" FontSize="20"
                                    FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center"/>
                         <TextBlock Text="{loc:Tr Empty_Sub}" Margin="0,6,0,18"
-                                   Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="{loc:Tr Btn_PickFiles}"
                                 Click="AddMod_Click" HorizontalAlignment="Center"/>
                     </StackPanel>
@@ -319,29 +319,34 @@
             <loc:NexusView x:Name="NexusPane" Grid.Row="3" Margin="20,0,0,0" Visibility="Collapsed"/>
 
             <!-- ===== Подвал ===== -->
-            <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0"
-                    Padding="20,11" Background="{StaticResource SurfaceBrush}">
+            <Border Grid.Row="4" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0"
+                    Padding="20,11" Background="{DynamicResource SurfaceBrush}">
                 <Grid>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <Ellipse x:Name="StatusDot" Width="8" Height="8" Margin="0,1,10,0"
-                                 Fill="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}"
+                                 Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="StatusText" Foreground="{DynamicResource MutedBrush}"
                                    Text="{loc:Tr Status_Ready}" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
-                    <TextBlock x:Name="CountText" HorizontalAlignment="Right"
-                               Foreground="{StaticResource MutedBrush}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button x:Name="SelfUpdateButton" Style="{StaticResource PrimaryButton}" Padding="12,3"
+                                FontSize="12" Margin="0,-3,14,-3" Visibility="Collapsed"
+                                Click="SelfUpdate_Click" ToolTip="{loc:Tr Upd_ConfirmTitle}"/>
+                        <TextBlock x:Name="CountText" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
                 </Grid>
             </Border>
 
             <!-- ===== Подсветка при перетаскивании файлов ===== -->
             <Border x:Name="DropOverlay" Grid.Row="1" Grid.RowSpan="4" Visibility="Collapsed"
-                    IsHitTestVisible="False" Background="#E60E0F12">
+                    IsHitTestVisible="False" Background="{DynamicResource OverlayBrush}">
                 <Grid Margin="20">
-                    <Rectangle Stroke="{StaticResource AccentBrush}" StrokeThickness="2"
+                    <Rectangle Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"
                                StrokeDashArray="5 4" RadiusX="16" RadiusY="16"/>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="44"
-                                   Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{loc:Tr Drop_Release}" FontFamily="Bahnschrift" FontSize="22"
                                    FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center"/>
                     </StackPanel>

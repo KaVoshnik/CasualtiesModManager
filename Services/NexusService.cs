@@ -49,7 +49,7 @@ public static class NexusService
 {
     public const string GameDomain = "scavprototype";
     private const string AppName = "CasualtiesModManager";
-    private const string AppVersion = "1.1.0";
+    private static string AppVersion => AppInfo.VersionText;
     private const string Api = "https://api.nexusmods.com/v1/";
     private const string GraphQl = "https://api.nexusmods.com/v2/graphql";
 

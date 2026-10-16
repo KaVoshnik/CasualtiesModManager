@@ -152,19 +152,19 @@ public partial class NexusView : UserControl
         var s = _lib.Settings;
         if (NexusService.HasKey)
         {
-            AccountDot.Fill = Res("OkBrush");
+            AccountDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "OkBrush");
             var who = string.IsNullOrEmpty(s.NexusUser) ? Loc.T("Nx_KeySet") : s.NexusUser;
             AccountText.Text = Loc.T("Nx_Account", who, Loc.T(s.NexusPremium ? "Nx_Premium" : "Nx_AccountFree"));
         }
         else
         {
-            AccountDot.Fill = Res("DangerBrush");
+            AccountDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "DangerBrush");
             AccountText.Text = Loc.T("Nx_NeedKey");
         }
 
         var nxm = false;
         try { nxm = NexusService.IsNxmHandlerOurs(); } catch { }
-        NxmDot.Fill = Res(nxm ? "OkBrush" : "MutedBrush");
+        NxmDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, nxm ? "OkBrush" : "MutedBrush");
         NxmText.Text = Loc.T(nxm ? "Nx_NxmOn" : "Nx_NxmOff");
 
         FreeNote.Visibility = NexusService.HasKey && !s.NexusPremium ? Visibility.Visible : Visibility.Collapsed;
@@ -191,7 +191,7 @@ public partial class NexusView : UserControl
         foreach (var b in new[] { SortPopular, SortNewest, SortUpdated, SortEndorsed })
         {
             var active = b.Tag as string == _sort.ToString();
-            b.Foreground = Res(active ? "AccentBrush" : "TextBrush");
+            b.SetResourceReference(Control.ForegroundProperty, active ? "AccentBrush" : "TextBrush");
             b.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
         }
     }

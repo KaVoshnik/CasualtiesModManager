@@ -143,6 +143,12 @@ public class AppSettings
     /// <summary>Язык интерфейса: "en" (по умолчанию) или "ru".</summary>
     public string Language { get; set; } = "en";
 
+    /// <summary>Тема: "dark" (по умолчанию), "light" или "system".</summary>
+    public string Theme { get; set; } = "dark";
+
+    /// <summary>Проверять обновления самого менеджера при запуске.</summary>
+    public bool AutoCheckSelfUpdate { get; set; } = true;
+
     /// <summary>Личный API-ключ Nexus Mods. Лежит только здесь и в сборки (.cumods) не попадает.</summary>
     public string NexusApiKey { get; set; } = "";
     public string NexusUser { get; set; } = "";

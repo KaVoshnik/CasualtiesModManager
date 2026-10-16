@@ -22,7 +22,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         _lib.Load();
-        Loc.Init(_lib.Settings.Language);   // язык — до InitializeComponent, чтобы XAML сразу получил нужные тексты
+        Loc.Init(_lib.Settings.Language);   // язык и тема — до InitializeComponent, чтобы окно сразу построилось правильно
+        Theme.Apply(_lib.Settings.Theme);
         InitializeComponent();
         NexusPane.Init(this, _lib);
         Loc.LanguageChanged += OnLanguageChanged;
@@ -65,6 +66,7 @@ public partial class MainWindow : Window
         {
             // программу могли запустить кликом по nxm-ссылке на сайте Nexus
             if (App.StartupNxm is { } nxm) await HandleNxmAsync(nxm);
+            if (_lib.Settings.AutoCheckSelfUpdate) _ = CheckSelfUpdateAsync(announce: false);
             await CheckAllAsync(announce: false);
         };
     }
@@ -111,7 +113,7 @@ public partial class MainWindow : Window
     private void SetStatus(string text, StatusKind kind = StatusKind.Info)
     {
         StatusText.Text = text;
-        StatusDot.Fill = Res(kind switch
+        StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, kind switch
         {
             StatusKind.Ok => "OkBrush",
             StatusKind.Error => "DangerBrush",
@@ -148,23 +150,23 @@ public partial class MainWindow : Window
         var ok = GameLocator.IsGameDir(dir);
 
         GamePathText.Text = ok ? dir : Loc.T("Game_PathPrompt");
-        GameDot.Fill = Res(ok ? "OkBrush" : "DangerBrush");
+        GameDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, ok ? "OkBrush" : "DangerBrush");
         GameChipText.Text = Loc.T(ok ? "Game_Found" : "Game_NotFound");
 
         var bep = ok && BepInExInstaller.IsInstalled(dir!);
         if (!ok)
         {
-            BepDot.Fill = Res("MutedBrush");
+            BepDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "MutedBrush");
             BepChipText.Text = "BepInEx";
         }
         else if (bep)
         {
-            BepDot.Fill = Res("OkBrush");
+            BepDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "OkBrush");
             BepChipText.Text = Loc.T("Bep_Installed");
         }
         else
         {
-            BepDot.Fill = Res("WarnBrush");
+            BepDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "WarnBrush");
             BepChipText.Text = Loc.T("Bep_Install");
         }
 
@@ -570,7 +572,93 @@ public partial class MainWindow : Window
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e) =>
-        new SettingsDialog(Loc.SetLanguage) { Owner = this }.ShowDialog();
+        new SettingsDialog(this, _lib) { Owner = this }.ShowDialog();
+
+    /// <summary>Тему сменили в настройках: применяем сразу и запоминаем.</summary>
+    internal void SetTheme(string mode)
+    {
+        _lib.Settings.Theme = Theme.Normalize(mode);
+        _lib.Save();
+        Theme.Apply(_lib.Settings.Theme);
+    }
+
+    // ---------- Обновление самого менеджера ----------
+
+    private SelfUpdate? _selfUpdate;
+    private bool _selfUpdating;
+
+    internal SelfUpdate? PendingSelfUpdate => _selfUpdate;
+
+    /// <summary>Ищет новую версию менеджера. Ошибка возвращается текстом (при тихой проверке на старте её не показываем).</summary>
+    internal async Task<(SelfUpdate? Update, string? Error)> CheckSelfUpdateAsync(bool announce)
+    {
+        try
+        {
+            if (announce) SetStatus(Loc.T("Upd_Checking"));
+            _selfUpdate = await SelfUpdater.CheckAsync();
+            RefreshSelfUpdateUi();
+            if (_selfUpdate != null)
+                SetStatus(Loc.T("Upd_Available", _selfUpdate.Version.ToString(3)), StatusKind.Ok);
+            else if (announce)
+                SetStatus(Loc.T("Upd_UpToDate"), StatusKind.Ok);
+            return (_selfUpdate, null);
+        }
+        catch (Exception ex)
+        {
+            if (announce) SetStatus(Loc.T("Upd_Failed", ex.Message), StatusKind.Error);
+            return (null, ex.Message);
+        }
+    }
+
+    private void RefreshSelfUpdateUi()
+    {
+        var show = _selfUpdate != null && SelfUpdater.CanSelfUpdate;
+        SelfUpdateButton.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show) SelfUpdateButton.Content = Loc.T("Upd_Button", _selfUpdate!.Version.ToString(3));
+    }
+
+    private async void SelfUpdate_Click(object sender, RoutedEventArgs e) => await InstallSelfUpdateAsync();
+
+    /// <summary>Скачивает новую версию, подменяет файлы и перезапускает менеджер.</summary>
+    internal async Task InstallSelfUpdateAsync()
+    {
+        var u = _selfUpdate;
+        if (u == null || _selfUpdating) return;
+
+        var ask = MessageBox.Show(this, Loc.T("Upd_Confirm", u.Version.ToString(3)), Loc.T("Upd_ConfirmTitle"),
+            MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (ask != MessageBoxResult.OK) return;
+
+        _selfUpdating = true;
+        SelfUpdateButton.IsEnabled = false;
+        try
+        {
+            var shown = -1;
+            var progress = new Progress<double>(p =>
+            {
+                var pct = (int)(p * 100);
+                if (pct == shown) return;
+                shown = pct;
+                SetStatus(Loc.T("Upd_Downloading", u.Version.ToString(3), pct));
+            });
+            SetStatus(Loc.T("Upd_Downloading", u.Version.ToString(3), 0));
+            await SelfUpdater.DownloadAndApplyAsync(u, progress);
+
+            SetStatus(Loc.T("Upd_Restarting"), StatusKind.Ok);
+            _lib.Save();
+            SelfUpdater.Restart();
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.T("Upd_Error", ex.Message), StatusKind.Error);
+            SelfUpdateButton.IsEnabled = true;
+        }
+        finally
+        {
+            _selfUpdating = false;
+        }
+    }
 
     /// <summary>Язык сменили в настройках: сохраняем и обновляем тексты, которые собираются в коде.</summary>
     private void OnLanguageChanged()
@@ -586,6 +674,7 @@ public partial class MainWindow : Window
         RefreshHeader();
         UpdateCounts();
         RefreshUpdateUi();
+        RefreshSelfUpdateUi();
         NexusPane.OnLanguageChanged();
         SetStatus(Loc.T("Status_Ready"));
     }

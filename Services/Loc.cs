@@ -314,5 +314,45 @@ public sealed class Loc : INotifyPropertyChanged
         ["Src_Link"] = ("Link", "Ссылка"),
         ["Src_Known"] = ("{0} · {1}", "{0} · {1}"),
         ["Src_Unknown"] = ("{0} · version unknown", "{0} · версия неизвестна"),
+
+        // ---------- Настройки: тема, обновления, диагностика ----------
+        ["Set_Theme"] = ("Theme", "Тема"),
+        ["Theme_Dark"] = ("Dark", "Тёмная"),
+        ["Theme_Light"] = ("Light", "Светлая"),
+        ["Theme_System"] = ("System", "Как в системе"),
+        ["Set_Updates"] = ("Updates", "Обновления"),
+        ["Set_Version"] = ("Version {0}", "Версия {0}"),
+        ["Set_CheckUpdates"] = ("Check for updates", "Проверить обновления"),
+        ["Set_AutoCheck"] = ("Check for updates on startup", "Проверять обновления при запуске"),
+        ["Set_Diagnostics"] = ("Bug report", "Багрепорт"),
+        ["Set_DiagHint"] = (
+            "Copies versions, game and BepInEx state, the mod list and recent log errors. API keys are not included.",
+            "Копирует версии, состояние игры и BepInEx, список модов и последние ошибки из лога. API-ключи не включаются."),
+        ["Set_CopyReport"] = ("Copy report", "Скопировать отчёт"),
+        ["Set_Copied"] = ("Copied to clipboard", "Скопировано в буфер обмена"),
+        ["Set_CopyFailed"] = ("Couldn't copy: {0}", "Не удалось скопировать: {0}"),
+
+        ["Upd_Checking"] = ("Checking for updates…", "Проверяю обновления…"),
+        ["Upd_UpToDate"] = ("You have the latest version", "Установлена последняя версия"),
+        ["Upd_Available"] = ("New version {0} is available", "Доступна новая версия {0}"),
+        ["Upd_Button"] = ("Update manager → {0}", "Обновить менеджер → {0}"),
+        ["Upd_Failed"] = ("Update check failed: {0}", "Не удалось проверить обновление: {0}"),
+        ["Upd_Confirm"] = (
+            "Install version {0} and restart the manager?\n\nYour mods and settings are kept.",
+            "Установить версию {0} и перезапустить менеджер?\n\nМоды и настройки сохранятся."),
+        ["Upd_ConfirmTitle"] = ("Manager update", "Обновление менеджера"),
+        ["Upd_Downloading"] = ("Downloading manager {0}… {1}%", "Скачиваю менеджер {0}… {1}%"),
+        ["Upd_Installing"] = ("Installing…", "Устанавливаю…"),
+        ["Upd_Restarting"] = ("Restarting…", "Перезапускаю…"),
+        ["Upd_Error"] = ("Couldn't update the manager: {0}", "Не удалось обновить менеджер: {0}"),
+        ["E_GitHubStatus"] = ("GitHub returned error {0}", "GitHub ответил ошибкой {0}"),
+        ["E_NoAppAsset"] = (
+            "Release {0} has no manager file (.exe or .zip)",
+            "В релизе {0} нет файла менеджера (.exe или .zip)"),
+        ["E_SelfUpdateUnsupported"] = (
+            "Self-update only works when run from the built .exe",
+            "Автообновление работает только из собранного .exe"),
+        ["E_HashMismatch"] = ("The downloaded file is damaged (checksum mismatch)", "Скачанный файл повреждён (не совпала контрольная сумма)"),
+        ["E_NoExeInZip"] = ("The archive doesn't contain {0}", "В архиве нет файла {0}"),
     };
 }

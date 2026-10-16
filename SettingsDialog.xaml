@@ -2,25 +2,66 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CasualtiesModManager"
-        Width="420" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize"
+        Width="460" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
+        Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
         FontFamily="Segoe UI" FontSize="13" PreviewKeyDown="Window_PreviewKeyDown">
-    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1" Padding="24,20,24,22">
+    <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Padding="24,20,24,22">
         <StackPanel>
             <TextBlock Text="{loc:Tr Set_Title}" FontFamily="Bahnschrift" FontSize="18" FontWeight="SemiBold"
                        Cursor="SizeAll" MouseLeftButtonDown="Title_MouseDown"/>
 
+            <!-- Язык -->
             <TextBlock Text="{loc:Tr Set_Language}" Margin="0,18,0,8" FontSize="11" FontWeight="SemiBold"
-                       Foreground="{StaticResource MutedBrush}"/>
+                       Foreground="{DynamicResource MutedBrush}"/>
             <StackPanel Orientation="Horizontal">
                 <Button x:Name="LangEn" Style="{StaticResource ChipButton}" Content="English" Tag="en"
                         Click="Lang_Click" Margin="0,0,8,0"/>
                 <Button x:Name="LangRu" Style="{StaticResource ChipButton}" Content="Русский" Tag="ru"
                         Click="Lang_Click"/>
             </StackPanel>
-            <TextBlock Text="{loc:Tr Set_LanguageHint}" Margin="0,8,0,0" FontSize="12"
-                       Foreground="{StaticResource MutedBrush}"/>
+
+            <!-- Тема -->
+            <TextBlock Text="{loc:Tr Set_Theme}" Margin="0,18,0,8" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="ThemeDark" Style="{StaticResource ChipButton}" Content="{loc:Tr Theme_Dark}"
+                        Tag="dark" Click="Theme_Click" Margin="0,0,8,0"/>
+                <Button x:Name="ThemeLight" Style="{StaticResource ChipButton}" Content="{loc:Tr Theme_Light}"
+                        Tag="light" Click="Theme_Click" Margin="0,0,8,0"/>
+                <Button x:Name="ThemeSystem" Style="{StaticResource ChipButton}" Content="{loc:Tr Theme_System}"
+                        Tag="system" Click="Theme_Click"/>
+            </StackPanel>
+
+            <!-- Обновления -->
+            <TextBlock Text="{loc:Tr Set_Updates}" Margin="0,18,0,8" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <TextBlock x:Name="VersionText"/>
+            <TextBlock x:Name="UpdateText" Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button x:Name="CheckButton" Style="{StaticResource SecondaryButton}"
+                        Content="{loc:Tr Set_CheckUpdates}" Click="Check_Click" Margin="0,0,8,0"/>
+                <Button x:Name="InstallButton" Style="{StaticResource PrimaryButton}" Visibility="Collapsed"
+                        Click="Install_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <CheckBox x:Name="AutoCheck" Style="{StaticResource ToggleSwitch}" VerticalAlignment="Center"
+                          Click="AutoCheck_Click"/>
+                <TextBlock Text="{loc:Tr Set_AutoCheck}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Диагностика -->
+            <TextBlock Text="{loc:Tr Set_Diagnostics}" Margin="0,18,0,8" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <TextBlock Text="{loc:Tr Set_DiagHint}" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedBrush}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button Style="{StaticResource SecondaryButton}" Content="{loc:Tr Set_CopyReport}"
+                        Click="CopyReport_Click" Margin="0,0,10,0"/>
+                <TextBlock x:Name="CopyText" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{DynamicResource OkBrush}"/>
+            </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
                 <Button Style="{StaticResource PrimaryButton}" Content="{loc:Tr Set_Close}" IsDefault="True"

@@ -4,17 +4,17 @@
         xmlns:loc="clr-namespace:CasualtiesModManager"
         Width="540" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
+        Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
         FontFamily="Segoe UI" FontSize="13" PreviewKeyDown="Window_PreviewKeyDown">
-    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1" Padding="24,20,24,22">
+    <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Padding="24,20,24,22">
         <StackPanel>
             <TextBlock x:Name="TitleText" FontFamily="Bahnschrift" FontSize="18" FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" Cursor="SizeAll" MouseLeftButtonDown="Title_MouseDown"/>
             <TextBlock x:Name="HintText" Margin="0,8,0,16" TextWrapping="Wrap"
-                       Foreground="{StaticResource MutedBrush}"/>
+                       Foreground="{DynamicResource MutedBrush}"/>
             <TextBox x:Name="UrlBox" Style="{StaticResource FieldBox}"/>
             <TextBlock x:Name="ErrorText" Margin="0,8,0,0" TextWrapping="Wrap" Visibility="Collapsed"
-                       Foreground="{StaticResource DangerBrush}"/>
+                       Foreground="{DynamicResource DangerBrush}"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
                 <Button Style="{StaticResource SecondaryButton}" Content="{loc:Tr Dlg_Cancel}" IsCancel="True"
                         Margin="0,0,8,0" Click="Cancel_Click"/>
